@@ -10,7 +10,6 @@ const {
     actualizarOficina,
     borrarOficina,
     getOficina,
-    find_by_name,
 } = require('../controllers/oficinaController');
 
 const { validarJWT } = require('../middlewares/validar-jwt');
@@ -33,11 +32,6 @@ router.put('/editar/:id', [
 ], actualizarOficina);
 
 router.delete('/borrar/:id', validarJWT, borrarOficina);
-
-
-
-
-router.get('/category_by_nombre/:nombre', find_by_name);
 
 
 module.exports = router;

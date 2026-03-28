@@ -1,3 +1,7 @@
+'use strict'
+var mongoose = require('mongoose');
+const { Schema, model } = require('mongoose');
+
 const paymentSchema = Schema({
     // Relación vital: ¿Qué factura se está pagando?
     factura: { 

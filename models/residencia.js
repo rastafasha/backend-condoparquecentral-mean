@@ -4,7 +4,7 @@ const { Schema, model } = require('mongoose');
 
 const residenciaSchema = Schema({
     edificio: { type: String, required: true },
-    letra: { type: String, required: true },
+    letra: { type: String, required: false },
     piso: { type: String, required: false },
     montoMensual: { type: Number, required: true, default: 0 },
     usuario: { type: Schema.Types.ObjectId, ref: 'Usuario' },

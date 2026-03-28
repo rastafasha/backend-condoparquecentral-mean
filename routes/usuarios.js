@@ -25,7 +25,9 @@ const {
 router.get('/',  getUsuariosList);
 router.get('/recientes', newest);
 router.get('/all', validarJWT, getAllUsers);
-router.get('/:id', [validarJWT], getUsuario);
+router.get('/:id', 
+    // [validarJWT],
+     getUsuario);
 router.delete('/delete/:id', [validarJWT], borrarUsuario);
 
 router.get('/user_token/set/:email', set_token_recovery);

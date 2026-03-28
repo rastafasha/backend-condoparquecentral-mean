@@ -11,10 +11,9 @@ var PaymentMethodSchema = Schema({
     phone: { type: String, required: false },
     email: { type: String, required: false },
     user: { type: Schema.ObjectId, ref: 'user' },
-    local: { type: Schema.ObjectId, ref: 'tienda' , default: null},
     status: { type: String, required: true, default: 'INACTIVE' },
     createdAt: { type: Date, default: Date.now, required: true },
     updatedAt: { type: Date }
 });
 
-module.exports = mongoose.model('paymentmethod', PaymentMethodSchema);
+module.exports = mongoose.model('Paymentmethod', PaymentMethodSchema);

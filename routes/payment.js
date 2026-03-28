@@ -26,7 +26,9 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-router.get('/',  validarJWT, getPayments);
+router.get('/', 
+    // validarJWT, 
+    getPayments);
 router.get('/monthlyreport',  validarJWT, getMonthlyReport);
 
 router.get('/:id',  validarJWT, getPayment);
@@ -47,9 +49,9 @@ router.post('/validarpago/:id', [
     validarCampos
 ], validarPagoAdministrativo);
 
-router.delete('/delete/:id',  validarJWT, deletePayment);
 router.put('/update/:id',  validarJWT, updatePayment);
 router.put('/updatestatus/:id',  validarJWT, updateStatus);
+router.delete('/delete/:id',  validarJWT, deletePayment);
 
 router.post('/enviar_factura', upload.single('facturacliente'), enviarFactura);
 

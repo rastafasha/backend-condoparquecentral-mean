@@ -10,8 +10,6 @@ const usuarioSchema = Schema({
     terminos: { type: Boolean, required: false },
     google: { type: Boolean, default: false },
     profile: { type: Schema.Types.ObjectId, ref: 'profile' },
-    createdAt: { type: Date, default: Date.now, required: true },
-    updatedAt: { type: Date, default: Date.now, required: true }
 }, { collection: 'usuarios', timestamps: true  });
 
 usuarioSchema.method('toJSON', function() { // modificar el _id a uid, esconde el password

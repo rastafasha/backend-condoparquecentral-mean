@@ -18,22 +18,19 @@ const {
 
 const {
     validarJWT,
-    validarAdminRoleOMismoUsuario,
 } = require('../middlewares/validar-jwt');
 
 
-router.get('/all/', validarJWT, getProfiles);
-router.get('/editores', getProfilesrole);
+router.get('/all/', 
+    validarJWT, 
+    getProfiles);
+
 router.get('/:id', [validarJWT], getProfile);
-router.delete('/borrar/:id', [validarJWT, ], borrarProfile);
 router.get('/user_profile/:id', listarProfilePorUsuario);
 router.get('/estadocuenta/:id', obtenerEstadoCuentaUsuario);
 
 router.post('/crear', [
     validarJWT,
-    // check('first_name', 'el first_name es obligatorio').not().isEmpty(),
-    // check('last_name', 'el last_name es obligatorio').not().isEmpty(),
-    // check('usuario', 'El usuario id debe de ser valido').isMongoId(),
     validarCampos
 ], crearProfile);
 
@@ -42,6 +39,8 @@ router.put('/editar/:id', [
     validarJWT,
     validarCampos
 ], actualizarProfile);
+
+router.delete('/borrar/:id', [validarJWT, ], borrarProfile);
 
 
 

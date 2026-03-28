@@ -1,6 +1,6 @@
 
 /*
- Ruta: /api/categorias
+ Ruta: /api/facturacion
  */
 
 const { Router } = require('express');

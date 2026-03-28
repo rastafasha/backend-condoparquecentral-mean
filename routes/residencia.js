@@ -10,7 +10,6 @@ const {
     actualizarResidencia,
     borrarResidencia,
     getResidencia,
-    find_by_name,
 } = require('../controllers/residenciaController');
 
 const { validarJWT } = require('../middlewares/validar-jwt');
@@ -33,11 +32,6 @@ router.put('/editar/:id', [
 ], actualizarResidencia);
 
 router.delete('/borrar/:id', validarJWT, borrarResidencia);
-
-
-
-
-router.get('/category_by_nombre/:nombre', find_by_name);
 
 
 module.exports = router;

@@ -6,6 +6,13 @@
     "scripts": {
         "start:dev": "nodemon index.js",
         "seed:usuarios": "node seeders/usuarioSeeder.js",
+        "seed:residencias": "node seeders/residenciasSeeder.js",
+        "seed:oficinas": "node seeders/oficinasSeeder.js",
+        "seed:locales": "node seeders/localesSeeder.js",
+        "seed:facturacion": "node seeders/facturacionSeeder.js",
+        "seed:payments": "node seeders/paymentsSeeder.js",
+        "seed:profile": "node seeders/profileSeeder.js",
+        "seed:transferencias": "node seeders/transferenciasSeeder.js",
         "start": "node index.js"
     },
     "keywords": [],

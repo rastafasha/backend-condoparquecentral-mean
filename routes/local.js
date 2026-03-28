@@ -34,9 +34,4 @@ router.put('/editar/:id', [
 router.delete('/borrar/:id', validarJWT, borrarLocal);
 
 
-
-
-router.get('/category_by_nombre/:nombre', find_by_name);
-
-
 module.exports = router;

@@ -1,14 +1,13 @@
 const { response } = require('express');
 const Transferencia = require('../models/transferencia');
 const nodemailer = require('nodemailer');
-const Congeneral = require('../models/congeneral');
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_BACKEND,
-        pass: process.env.PASSWORD_APP
-    }
-});
+// const transporter = nodemailer.createTransport({
+//     service: 'gmail',
+//     auth: {
+//         user: process.env.EMAIL_BACKEND,
+//         pass: process.env.PASSWORD_APP
+//     }
+// });
 const getTransferencias = async(req, res) => {
 
     const transferencias = await Transferencia.find()

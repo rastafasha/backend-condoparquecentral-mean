@@ -5,31 +5,34 @@ const Usuario = require('../models/usuario');
 
 const usuariosData = [
     {
-        first_name: 'Super',
-        last_name: 'Admin',
+        username: 'Super',
         email: 'superadmin@superadmin.com',
         password: 'password',
-        role: 'SUPERADMIN',
-        pais: 'VE',
-        ciudad: 'Caracas'
+        role: 'SUPERADMIN_ROLE'
     },
     {
-        first_name: 'Admin',
-        last_name: 'Admin',
+        username: 'Admin',
         email: 'admin@admin.com',
         password: 'password',
-        role: 'ADMIN',
-        pais: 'VE',
-        ciudad: 'Caracas'
+        role: 'ADMIN_ROLE'
     },
     {
-        first_name: 'User',
-        last_name: 'User',
-        email: 'user@user.com',
+        username: 'Juan',
+        email: 'juan@propietario.com',
         password: 'password',
-        role: 'USER',
-        pais: 'VE',
-        ciudad: 'Caracas'
+        role: 'USER_ROLE'
+    },
+    {
+        username: 'Ana',
+        email: 'ana@propietaria.com',
+        password: 'password',
+        role: 'USER_ROLE'
+    },
+    {
+        username: 'Carlos',
+        email: 'carlos@propietario.com',
+        password: 'password',
+        role: 'USER_ROLE'
     }
 ];
 
@@ -54,9 +57,9 @@ const seedUsuarios = async () => {
 
         await Usuario.insertMany(usuariosConHash);
         console.log('✅ Usuarios insertados correctamente');
-        console.log('   - superadmin@superadmin.com (SUPERADMIN)');
-        console.log('   - admin@admin.com (ADMIN)');
-        console.log('   - user@user.com (USER)');
+        console.log('   - superadmin@superadmin.com (SUPERADMIN_ROLE)');
+        console.log('   - admin@admin.com (ADMIN_ROLE)');
+        console.log('   - user@user.com (USER_ROLE)');
 
         mongoose.connection.close();
         console.log('✅ Conexión cerrada');
