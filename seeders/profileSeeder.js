@@ -21,15 +21,15 @@ const profilesDataTemplate = [
         statusFinanciero: 'AL_DIA',
         deudaTotalAcumulada: 0
     },
-    // 2. Propietario 2: SOLO OFICINA (Ana Martinez)
+    // 2. Propietario 2: RESIDENCIA + LOCAL + OFICINA (Ana Martinez)
     {
         first_name: 'Ana',
         last_name: 'Martinez',
         telhome: '0212-1234567',
         telmovil: '+58 414-7654321',
-        haveResidencia: false,
+        haveResidencia: true,
         haveOficina: true,
-        haveLocal: false,
+        haveLocal: true,
         residencia: [],
         oficina: [],
         local: [],
@@ -66,7 +66,9 @@ const seedProfiles = async () => {
         if (usuariosPropietarios.length < 3) {
             throw new Error('Ejecuta usuarioSeeder.js actualizado - necesita al menos 3 USER_ROLE propietarios');
         }
-        const [juan, ana, carlos] = usuariosPropietarios;
+        const juan = await Usuario.findOne({username: 'Juan'});
+        const ana = await Usuario.findOne({username: 'Ana'});
+        const carlos = await Usuario.findOne({username: 'Carlos'}); 
 
         // Obtener propiedades
         const residencias = await Residencia.find({}).limit(3);
@@ -74,11 +76,17 @@ const seedProfiles = async () => {
         const locales = await Local.find({}).limit(3);
 
         // Asignar
+        if (!juan || !ana || !carlos) {
+          throw new Error('No se encontraron todos los usuarios Juan, Ana, Carlos');
+        }
+
         profilesDataTemplate[0].usuario = juan._id;
         if (residencias[0]) profilesDataTemplate[0].residencia = [residencias[0]._id];
 
         profilesDataTemplate[1].usuario = ana._id;
+        if (residencias[2]) profilesDataTemplate[1].residencia = [residencias[2]._id];
         if (oficinas[0]) profilesDataTemplate[1].oficina = [oficinas[0]._id];
+        if (locales[1]) profilesDataTemplate[1].local = [locales[1]._id];
 
         profilesDataTemplate[2].usuario = carlos._id;
         if (residencias[1]) profilesDataTemplate[2].residencia = [residencias[1]._id];

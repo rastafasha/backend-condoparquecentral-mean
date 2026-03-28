@@ -88,7 +88,7 @@ app.use('/api/uploads', require('./routes/uploads'));
   app.use('/api/tipopago', require('./routes/tipopago'));
   app.use('/api/payments', require('./routes/payment'));
   app.use('/api/facturacion', require('./routes/facturacion'));
-  app.use('/api/transferencias', require('./routes/transferencia'));
+  app.use('/api/tasabcv', require('./routes/tasabcv'));
 
   app.use('/api/residencias', require('./routes/residencia'));
   app.use('/api/locales', require('./routes/local'));

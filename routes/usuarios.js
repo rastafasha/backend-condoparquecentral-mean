@@ -26,9 +26,13 @@ router.get('/',  getUsuariosList);
 router.get('/recientes', newest);
 router.get('/all', validarJWT, getAllUsers);
 router.get('/:id', 
-    // [validarJWT],
-     getUsuario);
-router.delete('/delete/:id', [validarJWT], borrarUsuario);
+    // validarJWT, 
+    getUsuario);
+router.delete('/delete/:id', [
+    validarJWT,
+    check('id').isMongoId().withMessage('ID inválido'),
+    validarCampos
+], borrarUsuario);
 
 router.get('/user_token/set/:email', set_token_recovery);
 router.get('/user_verify/token/:email/:codigo', verify_token_recovery);
@@ -45,6 +49,7 @@ router.post('/crear', [
 
 router.put('/editar/:id', [
     validarJWT,
+    check('id').isMongoId().withMessage('ID de usuario inválido'),
     check('first_name', 'el nombre es obligatorio').not().isEmpty(),
     check('email', 'el email es obligatorio').isEmail(),
     check('role', 'el role es obligatorio').not().isEmpty(),
@@ -53,6 +58,7 @@ router.put('/editar/:id', [
 
 router.put('/editarRole/:id', [
     validarJWT,
+    check('id').isMongoId().withMessage('ID de usuario inválido'),
     check('role', 'el role es obligatorio').not().isEmpty(),
     validarCampos
 ], actualizarUsuarioRole);

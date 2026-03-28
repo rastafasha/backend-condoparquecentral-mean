@@ -105,10 +105,52 @@ const generarFacturacionMensualMasiva = async (req, res) => {
     }
 };
 
+const getFacturaciones = async(req, res) => {
 
+    const facturas = await Facturacion.find()
+    res.json({
+        ok: true,
+        facturas
+    });
+};
+
+
+const getFactura = async(req, res) => {
+
+    const id = req.params.id;
+
+
+    Facturacion.findById(id, {})
+        .exec((err, factura) => {
+            if (err) {
+                return res.status(500).json({
+                    ok: false,
+                    mensaje: 'Error al buscar Factura',
+                    errors: err
+                });
+            }
+            if (!factura) {
+                return res.status(400).json({
+                    ok: false,
+                    mensaje: 'La Factura con el id ' + id + 'no existe',
+                    errors: { message: 'No existe una Factura con ese ID' }
+                });
+
+            }
+            res.status(200).json({
+                ok: true,
+                factura: factura
+            });
+        });
+
+
+    
+};
 
 
 module.exports = {
     generarFacturaDinamica,
     generarFacturacionMensualMasiva,
+    getFacturaciones,
+    getFactura
 };

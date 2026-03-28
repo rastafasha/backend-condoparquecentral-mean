@@ -5,30 +5,44 @@ const Residencia = require('../models/residencia');
 const residenciasData = [
     {
         edificio: 'Catuche',
+        piso: 1,
+        letra:'L',
         montoMensual: 500
     },
     {
         edificio: 'Tajamar',
+        piso: 1,
+        letra:'L',
         montoMensual: 500
     },
     {
         edificio: 'Tacagua',
+        piso: 1,
+        letra:'L',
         montoMensual: 500
     },
     {
         edificio: 'San Martín',
+        piso: 1,
+        letra:'L',
         montoMensual: 500
     },
     {
         edificio: 'Mohedano',
+        piso: 1,
+        letra:'L',
         montoMensual: 500
     },
     {
         edificio: 'Caruata',
+        piso: 1,
+        letra:'L',
         montoMensual: 500
     },
     {
         edificio: 'El Tejar',
+        piso: 1,
+        letra:'L',
         montoMensual: 500
     },
 ];

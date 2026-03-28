@@ -1,4 +1,5 @@
 const { response } = require('express');
+const mongoose = require('mongoose');
 const Usuario = require('../models/usuario');
 const Profile = require('../models/profile');
 const bcrypt = require('bcryptjs');
@@ -133,37 +134,64 @@ const getAllUsers = async (req, res) => {
 
 
 const getUsuario = async (req, res = response) => {
+    const id = req.params.id?.trim();
 
-    const id = req.params.id;
+    if (!id) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'ID de usuario es requerido'
+        });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'ID de usuario inválido'
+        });
+    }
 
     try {
-
         const usuario = await Usuario.findById(id)
-            .populate('profile', 'first_name last_name  telhome')
+            .populate('profile', 'first_name last_name telhome');
+
+        if (!usuario) {
+            return res.status(404).json({
+                ok: false,
+                msg: 'Usuario no encontrado'
+            });
+        }
 
         res.json({
             ok: true,
-            usuario: usuario
+            usuario
         });
 
     } catch (error) {
-        console.log(error);
+        console.error('Error en getUsuario:', error);
         res.status(500).json({
             ok: false,
-            msg: 'Error hable con el admin'
+            msg: 'Error interno del servidor'
         });
-
     }
-
-
-
 };
 
 
 const actualizarUsuario = async (req, res = response) => {
-    //todo: validar token y comprobar si el usuario es correcto
+    const uid = req.params.id?.trim();
 
-    const uid = req.params.id;
+    if (!uid) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'ID de usuario es requerido'
+        });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(uid)) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'ID de usuario inválido'
+        });
+    }
 
     try {
         const usuarioDB = await Usuario.findById(uid);
@@ -215,9 +243,21 @@ const actualizarUsuario = async (req, res = response) => {
     }
 };
 const actualizarUsuarioRole = async (req, res = response) => {
-    //todo: validar token y comprobar si el usuario es correcto
+    const uid = req.params.id?.trim();
 
-    const uid = req.params.id;
+    if (!uid) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'ID de usuario es requerido'
+        });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(uid)) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'ID de usuario inválido'
+        });
+    }
 
     try {
         const usuarioDB = await Usuario.findById(uid);
@@ -310,11 +350,23 @@ const actualizarUsuarioRole = async (req, res = response) => {
 
 
 const borrarUsuario = async (req, res) => {
+    const uid = req.params.id?.trim();
 
-    const uid = req.params.id;
+    if (!uid) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'ID de usuario es requerido'
+        });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(uid)) {
+        return res.status(400).json({
+            ok: false,
+            msg: 'ID de usuario inválido'
+        });
+    }
 
     try {
-
         const usuarioDB = await Usuario.findById(uid);
         if (!usuarioDB) {
             return res.status(404).json({
@@ -331,10 +383,10 @@ const borrarUsuario = async (req, res) => {
         });
 
     } catch (error) {
-        console.log(error);
+        console.error('Error en borrarUsuario:', error);
         res.status(500).json({
             ok: false,
-            msg: 'Error inesperado'
+            msg: 'Error interno del servidor'
         });
     }
 };
