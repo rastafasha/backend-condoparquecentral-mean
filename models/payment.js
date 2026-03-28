@@ -23,7 +23,7 @@ const paymentSchema = Schema({
     referencia: { type: String, required: true }, 
     
     // Soporte visual (Capture)
-    comprobante_img: { type: String }, 
+    img: { type: String, required: false },
 
     // Control administrativo
     status: { 
