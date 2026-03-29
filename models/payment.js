@@ -28,6 +28,7 @@ const paymentSchema = Schema({
     
     // Soporte visual (Capture)
     img: { type: String, required: false },
+    tasaBCV: { type: Number, required: true },
 
     // Control administrativo
     status: { 

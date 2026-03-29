@@ -8,6 +8,7 @@ const getPayments = async (req, res) => {
         const payments = await Payment.find()
             .sort({ createdAt: -1 })
             .populate('cliente')
+            .populate('factura')
         payments.sort((a, b) => b.createdAt - a.createdAt);
 
 

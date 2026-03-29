@@ -13,7 +13,7 @@ const TransferenciaSchema = Schema({
     bankName: { type: String, required: true },
     amount: { type: Number, required: true }, // Cambiado a Number para cálculos
     referencia: { type: String, required: true, unique: true },
-    
+    tasaBCV: { type: Number, required: true },
     // Estado del proceso
     status: { 
         type: String, 
@@ -22,7 +22,7 @@ const TransferenciaSchema = Schema({
     },
     
     paymentday: { type: Date, default: Date.now },
-    comprobante_img: { type: String } // Para el capture
+    img: { type: String } // Para el capture
 }, { 
     timestamps: true // Esto reemplaza tu pre('save') y updatedAt manual
 });
