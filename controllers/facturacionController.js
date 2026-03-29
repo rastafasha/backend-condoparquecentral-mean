@@ -1,8 +1,9 @@
 const Facturacion = require('../models/facturacion');
 const Profile = require('../models/profile');
+const Tasabcv = require('../models/tasabcv');
+const Contador = require('../models/contador');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
-const Tasabcv = require('../models/tasabcv');
 const getFacturaciones = async (req, res) => {
 
     const facturas = await Facturacion.find()
@@ -47,46 +48,85 @@ const getFactura = async (req, res) => {
 };
 const generarFacturacionMensualMasiva = async (req, res) => {
     try {
-        const { mes, anio, porcentajeIva } = req.body; // Parámetros globales del mes
+        // Recibimos los datos desde el modal de Angular
+        const { mes, anio, porcentajeIva, tasaBCV } = req.body;
+        const precioDolar = tasaBCV || 1; 
 
-        // 1. Buscamos TODOS los perfiles que tengan al menos una propiedad
-        const perfiles = await Profile.find()
-            .populate('usuario residencia oficina local');
-
+        const perfiles = await Profile.find().populate('usuario residencia oficina local');
         let facturasCreadas = 0;
 
-        // 2. Recorremos cada perfil para armar su factura
         for (let perfil of perfiles) {
-            //  Armamos el arreglo de detalles recorriendo lo que TENGA el perfil
+            // 1. Evitar duplicados por mes/año para cada usuario
+            const facturaExistente = await Facturacion.findOne({ 
+                usuario: perfil.usuario._id, 
+                mes, 
+                anio 
+            });
+            
+            if (facturaExistente) continue;
+
             const detalles = [];
 
-            //Si tiene residencias, las sumamos
-            // Sumamos montos de Residencias
+            // --- LÓGICA DE PROPIEDADES ---
+
+            // A. Residencias: Siempre EXENTAS (IVA 0)
             perfil.residencia.forEach(r => {
-                detalles.push({ origen: 'RESIDENCIA', propiedadId: r._id, montoBase: r.montoMensual, descripcion: `Edif. ${r.edificio} - Piso ${r.piso}` });
-            });
-            // Si tiene oficinas, las sumamos
-            // Sumamos montos de Oficinas
-            perfil.oficina.forEach(o => {
-                detalles.push({ origen: 'OFICINA', propiedadId: o._id, montoBase: o.montoMensual, descripcion: `Edif. ${o.edificio} - Ofic. ${o.letra}` });
-            });
-            // Si tiene Locales, las sumamos
-            // Sumamos montos de Locales
-            perfil.local.forEach(l => {
-                detalles.push({ origen: 'LOCAL', propiedadId: l._id, montoBase: l.montoMensual, descripcion: `Edif. ${l.edificio} - Local ${l.letra}` });
+                detalles.push({ 
+                    origen: 'RESIDENCIA', 
+                    propiedadId: r._id, 
+                    montoBase: r.montoMensual, 
+                    ivaPorcentaje: 0,
+                    montoIva: 0,
+                    descripcion: `Residencia: ${r.edificio} - ${r.letra}` 
+                });
             });
 
-            // Solo creamos factura si el usuario tiene propiedades cargadas
-            //VALIDACIÓN CRUCIAL: Solo guardamos la factura si el arreglo NO está vacío
+            // B. Oficinas: Gravadas (Toma el IVA del modal o de la oficina si existe)
+            perfil.oficina.forEach(o => {
+                const alicuota = o.ivaEspecial || porcentajeIva || 16;
+                const impuesto = o.montoMensual * (alicuota / 100);
+                detalles.push({ 
+                    origen: 'OFICINA', 
+                    propiedadId: o._id, 
+                    montoBase: o.montoMensual, 
+                    ivaPorcentaje: alicuota,
+                    montoIva: impuesto,
+                    descripcion: `Oficina: ${o.edificio} - ${o.letra}` 
+                });
+            });
+
+            // C. Locales: Gravados (Toma el IVA del modal o del local si existe)
+            perfil.local.forEach(l => {
+                const alicuota = l.ivaEspecial || porcentajeIva || 16;
+                const impuesto = l.montoMensual * (alicuota / 100);
+                detalles.push({ 
+                    origen: 'LOCAL', 
+                    propiedadId: l._id, 
+                    montoBase: l.montoMensual, 
+                    ivaPorcentaje: alicuota,
+                    montoIva: impuesto,
+                    descripcion: `Local: ${l.edificio} - ${l.letra}` 
+                });
+            });
+
+            // 2. Si el perfil tiene algo que cobrar, guardamos la factura
             if (detalles.length > 0) {
+                const contadorDoc = await Contador.findOneAndUpdate(
+                    { id: `factura_${anio}` },
+                    { $inc: { secuencia: 1 } },
+                    { new: true, upsert: true }
+                );
+                
+                const nroFacturaFinal = `FAC-${anio}-${contadorDoc.secuencia.toString().padStart(5, '0')}`;
+
                 const nuevaFactura = new Facturacion({
                     usuario: perfil.usuario._id,
-                    nroFactura: `PC-${anio}${mes}-${perfil.usuario._id.toString().slice(-4)}-${Date.now()}`,
-                    mes,
-                    anio,
+                    nroFactura: nroFacturaFinal,
+                    mes, 
+                    anio, 
                     detalles,
-                    porcentajeIva,
-                    aplicaRetencion: false, // Por defecto false, administración lo ajusta luego si hace falta
+                    tasaBCV: precioDolar,
+                    aplicaRetencion: perfil.esAgenteRetencion || false, // Heredado del perfil
                     estado: 'PENDIENTE'
                 });
 
@@ -97,14 +137,18 @@ const generarFacturacionMensualMasiva = async (req, res) => {
 
         res.json({
             ok: true,
-            msg: `Proceso completado. Se generaron ${facturasCreadas} facturas.`
+            msg: facturasCreadas > 0 
+                ? `Proceso completado. Se generaron ${facturasCreadas} facturas.` 
+                : "No se generaron facturas nuevas (ya estaban al día)."
         });
 
     } catch (error) {
-        console.log(error);
+        console.error(error);
         res.status(500).json({ ok: false, msg: 'Error en el proceso masivo' });
     }
 };
+
+
 const generarFacturaDinamica = async (req, res) => {
     try {
         const { usuario, mes, anio, porcentajeIva, aplicaRetencion, montoRetencion, otrosCargos, tipoInmueble, indexUnidad } = req.body;
@@ -134,14 +178,26 @@ const generarFacturaDinamica = async (req, res) => {
         if (origenFrontend === 'OFICINA') procesarPropiedades(perfil.oficina, 'Oficina');
         if (origenFrontend === 'LOCAL') procesarPropiedades(perfil.local, 'Local');
 
+        // 1. Buscamos el contador y lo incrementamos en 1 (atómico)
+        const contadorDoc = await Contador.findOneAndUpdate(
+            { id: `factura_${anio}` }, // Crea un contador único por año: "factura_2024"
+            { $inc: { secuencia: 1 } },
+            { new: true, upsert: true } // Si no existe, lo crea
+        );
+
+        const numeroSecuencial = contadorDoc.secuencia.toString().padStart(5, '0'); // Ej: 00001
+        const nroFacturaFinal = `FAC-${anio}-${numeroSecuencial}`;
+
         const factura = new Facturacion({
             usuario,
-            nroFactura: `FAC-${Date.now()}`,
+            nroFactura: nroFacturaFinal,
             mes, anio, detalles, porcentajeIva,
             aplicaRetencion: Boolean(aplicaRetencion),
             montoRetencion: aplicaRetencion ? (Number(montoRetencion) || 0) : 0,
             otrosCargos: Number(otrosCargos) || 0
         });
+
+
 
         const facturaGuardada = await factura.save();
         // 1. Unimos el nombre del perfil
@@ -214,7 +270,7 @@ const escribirPDF = (data, res) => {
     doc.text(`NOMBRE: ${data.usuarioNombre}`, 40, 90);
     doc.text(`INMUEBLE: ${data.inmueble}`, 40, 105);
     doc.text(`FECHA EMISIÓN: ${new Date().toLocaleDateString()}`, 420, 90);
-    doc.text(`RECIBO N°: ${data.nroFactura}`, 420, 105);
+    doc.text(`FACTURA NRO: ${data.nroFactura}`, 400, 50); // Imprimirá FAC-2024-0001
 
     // --- TABLA DE GASTOS ---
     const tableTop = 150;

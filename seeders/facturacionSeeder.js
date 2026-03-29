@@ -6,15 +6,15 @@ const Usuario = require('../models/usuario');
 const facturacionesData = [
     // Superadmin facturas
     {
-        usuario: null, // Se llenará con ObjectId después
+        usuario: null,
         nroFactura: 'FAC-Super-202410',
         mes: 10,
         anio: 2024,
+        tasaBCV: 35.2,
         detalles: [
-            { origen: 'RESIDENCIA', propiedadId: null, montoBase: 500, descripcion: 'Cuota residencia Catuche' },
-            { origen: 'LOCAL', propiedadId: null, montoBase: 300, descripcion: 'Alquiler local comercial' }
+            { origen: 'RESIDENCIA', propiedadId: null, montoBase: 500, ivaPorcentaje: 16, montoIva: 80, descripcion: 'Cuota residencia Catuche' },
+            { origen: 'LOCAL', propiedadId: null, montoBase: 300, ivaPorcentaje: 16, montoIva: 48, descripcion: 'Alquiler local comercial' }
         ],
-        porcentajeIva: 16,
         aplicaRetencion: false,
         otrosCargos: 50,
         estado: 'PAGADO'
@@ -24,11 +24,11 @@ const facturacionesData = [
         nroFactura: 'FAC-Super-202411',
         mes: 11,
         anio: 2024,
+        tasaBCV: 36.5,
         detalles: [
-            { origen: 'RESIDENCIA', montoBase: 500, descripcion: 'Cuota residencia Tajamar' },
-            { origen: 'EXTRA', montoBase: 100, descripcion: 'Multa mantenimiento' }
+            { origen: 'RESIDENCIA', propiedadId: null, montoBase: 500, ivaPorcentaje: 8, montoIva: 40, descripcion: 'Cuota residencia Tajamar' },
+            { origen: 'EXTRA', propiedadId: null, montoBase: 100, ivaPorcentaje: 0, montoIva: 0, descripcion: 'Multa mantenimiento' }
         ],
-        porcentajeIva: 16,
         aplicaRetencion: true,
         montoRetencion: 75,
         estado: 'PENDIENTE'
@@ -38,11 +38,11 @@ const facturacionesData = [
         nroFactura: 'FAC-Super-202412',
         mes: 12,
         anio: 2024,
+        tasaBCV: 37.1,
         detalles: [
-            { origen: 'OFICINA', montoBase: 400, descripcion: 'Oficina ejecutiva' },
-            { origen: 'LOCAL', montoBase: 300, descripcion: 'Local parking' }
+            { origen: 'OFICINA', propiedadId: null, montoBase: 400, ivaPorcentaje: 16, montoIva: 64, descripcion: 'Oficina ejecutiva' },
+            { origen: 'LOCAL', propiedadId: null, montoBase: 300, ivaPorcentaje: 8, montoIva: 24, descripcion: 'Local parking' }
         ],
-        porcentajeIva: 16,
         aplicaRetencion: false,
         estado: 'PAGADO'
     },
@@ -53,10 +53,10 @@ const facturacionesData = [
         nroFactura: 'FAC-Admin-202410',
         mes: 10,
         anio: 2024,
+        tasaBCV: 35.2,
         detalles: [
-            { origen: 'RESIDENCIA', montoBase: 500, descripcion: 'Cuota Tacagua' }
+            { origen: 'RESIDENCIA', propiedadId: null, montoBase: 500, ivaPorcentaje: 16, montoIva: 80, descripcion: 'Cuota Tacagua' }
         ],
-        porcentajeIva: 16,
         aplicaRetencion: false,
         otrosCargos: 25,
         estado: 'PAGADO'
@@ -66,11 +66,11 @@ const facturacionesData = [
         nroFactura: 'FAC-Admin-202411',
         mes: 11,
         anio: 2024,
+        tasaBCV: 36.5,
         detalles: [
-            { origen: 'RESIDENCIA', montoBase: 500, descripcion: 'Cuota San Martín' },
-            { origen: 'EXTRA', montoBase: 50, descripcion: 'Gastos administrativos' }
+            { origen: 'RESIDENCIA', propiedadId: null, montoBase: 500, ivaPorcentaje: 0, montoIva: 0, descripcion: 'Cuota San Martín' },
+            { origen: 'EXTRA', propiedadId: null, montoBase: 50, ivaPorcentaje: 16, montoIva: 8, descripcion: 'Gastos administrativos' }
         ],
-        porcentajeIva: 16,
         aplicaRetencion: true,
         montoRetencion: 50,
         estado: 'PENDIENTE'
@@ -80,10 +80,10 @@ const facturacionesData = [
         nroFactura: 'FAC-Admin-202412',
         mes: 12,
         anio: 2024,
+        tasaBCV: 37.1,
         detalles: [
-            { origen: 'LOCAL', montoBase: 350, descripcion: 'Local Mohedano' }
+            { origen: 'LOCAL', propiedadId: null, montoBase: 350, ivaPorcentaje: 8, montoIva: 28, descripcion: 'Local Mohedano' }
         ],
-        porcentajeIva: 16,
         aplicaRetencion: false,
         estado: 'PAGADO'
     },
@@ -94,11 +94,11 @@ const facturacionesData = [
         nroFactura: 'FAC-User-202410',
         mes: 10,
         anio: 2024,
+        tasaBCV: 35.2,
         detalles: [
-            { origen: 'RESIDENCIA', montoBase: 500, descripcion: 'Cuota Caruata' },
-            { origen: 'OFICINA', montoBase: 200, descripcion: 'Oficina pequeña' }
+            { origen: 'RESIDENCIA', propiedadId: null, montoBase: 500, ivaPorcentaje: 16, montoIva: 80, descripcion: 'Cuota Caruata' },
+            { origen: 'OFICINA', propiedadId: null, montoBase: 200, ivaPorcentaje: 16, montoIva: 32, descripcion: 'Oficina pequeña' }
         ],
-        porcentajeIva: 16,
         aplicaRetencion: false,
         estado: 'PENDIENTE'
     },
@@ -107,10 +107,10 @@ const facturacionesData = [
         nroFactura: 'FAC-User-202411',
         mes: 11,
         anio: 2024,
+        tasaBCV: 36.5,
         detalles: [
-            { origen: 'RESIDENCIA', montoBase: 500, descripcion: 'Cuota El Tejar' }
+            { origen: 'RESIDENCIA', propiedadId: null, montoBase: 500, ivaPorcentaje: 16, montoIva: 80, descripcion: 'Cuota El Tejar' }
         ],
-        porcentajeIva: 16,
         aplicaRetencion: false,
         otrosCargos: 30,
         estado: 'PAGADO'
@@ -120,11 +120,11 @@ const facturacionesData = [
         nroFactura: 'FAC-User-202412',
         mes: 12,
         anio: 2024,
+        tasaBCV: 37.1,
         detalles: [
-            { origen: 'RESIDENCIA', montoBase: 500, descripcion: 'Cuota diciembre' },
-            { origen: 'EXTRA', montoBase: 75, descripcion: 'Ajuste anual' }
+            { origen: 'RESIDENCIA', propiedadId: null, montoBase: 500, ivaPorcentaje: 8, montoIva: 40, descripcion: 'Cuota diciembre' },
+            { origen: 'EXTRA', propiedadId: null, montoBase: 75, ivaPorcentaje: 16, montoIva: 12, descripcion: 'Ajuste anual' }
         ],
-        porcentajeIva: 16,
         aplicaRetencion: true,
         montoRetencion: 60,
         estado: 'PENDIENTE'

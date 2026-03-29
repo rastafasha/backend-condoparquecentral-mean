@@ -11,6 +11,15 @@ const getTasas = async(req, res) => {
         tasas
     });
 };
+const getUltimatasa = async(req, res) => {
+
+    const tasa = await Tasabcv.find()
+
+    res.json({
+        ok: true,
+        tasa: tasa[tasa.length - 1] // Devuelve la última tasa del array
+    });
+};
 
 
 const getTasa = async(req, res) => {
@@ -172,4 +181,5 @@ module.exports = {
     crearTasa,
     actualizarTasa,
     borrarTasa,
+    getUltimatasa
 };

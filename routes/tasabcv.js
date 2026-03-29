@@ -10,6 +10,7 @@ const {
     crearTasa,
     actualizarTasa,
     borrarTasa,
+    getUltimatasa,
 } = require('../controllers/tasabcvController');
 
 const { validarJWT } = require('../middlewares/validar-jwt');
@@ -17,6 +18,7 @@ const { check } = require('express-validator');
 const { validarCampos } = require('../middlewares/validar-campos');
 
 router.get('/', getTasas);
+router.get('/ultimatasa', getUltimatasa);
 router.get('/:id', getTasa);
 
 router.post('/crear', [

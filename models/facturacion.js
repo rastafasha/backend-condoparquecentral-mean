@@ -6,44 +6,36 @@ const facturacionSchema = Schema({
     nroFactura: { type: String, unique: true, required: true },
     mes: { type: Number, required: true }, 
     anio: { type: Number, required: true },
-    
+    tasaBCV: { type: Number, required: true }, // <--- VITAL guardar la tasa del día del lote
+
     detalles: [{
-        origen: { 
-            type: String, 
-            enum: ['RESIDENCIA', 'LOCAL', 'OFICINA', 'EXTRA'], 
-            required: true 
-        },
+        origen: { type: String, enum: ['RESIDENCIA', 'LOCAL', 'OFICINA', 'EXTRA'], required: true },
         propiedadId: { type: Schema.Types.ObjectId }, 
         montoBase: { type: Number, required: true },
+        // --- Nuevo: IVA por cada línea de detalle ---
+        ivaPorcentaje: { type: Number, default: 0 }, 
+        montoIva: { type: Number, default: 0 },
         descripcion: { type: String }
     }],
 
-    // --- Campos de Impuestos ---
-    porcentajeIva: { type: Number, required: true, default: 16 }, 
-    aplicaRetencion: { type: Boolean, default: false, required: true }, // <--- El Booleano que faltaba
-    montoRetencion: { type: Number, default: 0 }, // Solo se llena si aplicaRetencion es true
+    // Ya no usamos un solo porcentajeIva global, sino la suma de los detalles
+    aplicaRetencion: { type: Boolean, default: false }, 
+    montoRetencion: { type: Number, default: 0 }, // Se llena cuando el usuario reporta el pago
+    comprobanteRetencion: { type: String }, // URL o nombre del archivo PDF de la retención
     
     otrosCargos: { type: Number, default: 0 },
-    
-    estado: { 
-        type: String, 
-        enum: ['PENDIENTE', 'PAGADO', 'ANULADO'], 
-        default: 'PENDIENTE' 
-    }
-}, { 
-    collection: 'facturaciones', 
-    timestamps: true 
-});
+    estado: { type: String, enum: ['PENDIENTE', 'PAGADO', 'ANULADO'], default: 'PENDIENTE' }
+}, { collection: 'facturaciones', timestamps: true });
 
-// Cálculo dinámico corregido
+// --- Cálculo Dinámico Robusto ---
 facturacionSchema.virtual('totalPagar').get(function() {
+    // Sumamos base + IVA de cada item individualmente
     const subtotal = this.detalles.reduce((acc, item) => acc + item.montoBase, 0);
-    const montoIva = subtotal * (this.porcentajeIva / 100);
+    const totalIva = this.detalles.reduce((acc, item) => acc + (item.montoIva || 0), 0);
     
-    // Si aplicaRetencion es false, ignoramos el montoRetencion aunque tenga valor
     const descuentoRetencion = this.aplicaRetencion ? this.montoRetencion : 0;
     
-    return (subtotal + montoIva + this.otrosCargos) - descuentoRetencion;
+    return (subtotal + totalIva + this.otrosCargos) - descuentoRetencion;
 });
 
 facturacionSchema.set('toJSON', { virtuals: true });
