@@ -39,6 +39,7 @@
         "node-mailer": "^0.1.1",
         "nodemailer": "^8.0.2",
         "nodemailer-smtp-transport": "^2.4.2",
+        "pdfkit": "^0.18.0",
         "request": "^2.88.2",
         "rimraf": "^3.0.2",
         "serverless-http": "^3.2.0",
