@@ -16,7 +16,8 @@ const {
     set_token_recovery,
     verify_token_recovery,
     change_password,
-    actualizarUsuarioRole
+    actualizarUsuarioRole,
+    cargarUsuariosMasivo
 } = require('../controllers/usuarioController');
 const {
     validarJWT,
@@ -24,7 +25,9 @@ const {
 
 router.get('/',  getUsuariosList);
 router.get('/recientes', newest);
-router.get('/all', validarJWT, getAllUsers);
+router.get('/all', 
+    // validarJWT, 
+    getAllUsers);
 router.get('/:id', 
     // validarJWT, 
     getUsuario);
@@ -45,6 +48,13 @@ router.post('/crear', [
     check('email', 'el email es obligatorio').isEmail(),
     validarCampos
 ], crearUsuarios);
+
+router.post('/cargarusuariosmasivos', [
+    check('username', 'el username es obligatorio').not().isEmpty(),
+    check('password', 'el password es obligatorio').not().isEmpty(),
+    check('email', 'el email es obligatorio').isEmail(),
+    validarCampos
+], cargarUsuariosMasivo);
 
 
 router.put('/editar/:id', [

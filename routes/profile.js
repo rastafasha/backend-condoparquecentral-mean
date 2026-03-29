@@ -22,7 +22,7 @@ const {
 
 
 router.get('/all/', 
-    validarJWT, 
+    // validarJWT, 
     getProfiles);
 
 router.get('/:id', [validarJWT], getProfile);

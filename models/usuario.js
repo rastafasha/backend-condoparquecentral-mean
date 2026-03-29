@@ -6,6 +6,7 @@ const usuarioSchema = Schema({
     username: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    numdoc: { type: String, required: true, unique: true  },
     role: { type: String, required: true, default: 'USER_ROLE' },
     terminos: { type: Boolean, required: false },
     google: { type: Boolean, default: false },

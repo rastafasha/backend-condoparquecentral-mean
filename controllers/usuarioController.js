@@ -4,9 +4,11 @@ const Usuario = require('../models/usuario');
 const Profile = require('../models/profile');
 const bcrypt = require('bcryptjs');
 const { generarJWT } = require('../helpers/jwt');
-
 var nodemailer = require('nodemailer');
 var smtpTransport = require('nodemailer-smtp-transport');
+//carga masiva
+// const csv = require('csv-parser');
+// const fs = require('fs');
 
 const crearUsuarios = async (req, res = response) => {
 
@@ -35,6 +37,7 @@ const crearUsuarios = async (req, res = response) => {
         const usuario = new Usuario({
             username: body.username,
             email: body.email,
+            numdoc: body.numdoc,
             // terminos: body.terminos,
             role: body.role,
         });
@@ -48,8 +51,8 @@ const crearUsuarios = async (req, res = response) => {
 
         // Enviar notificación de nuevo usuario al admin
         const adminTransporter = nodemailer.createTransport({
-            host: "zlipmenu.com",
-            port: 465,
+            host: process.env.HOST_GMAIL,
+            port: process.env.PORT_GMAIL,
             secure: true,
             auth: {
                 user: process.env.USER_EMAIL,
@@ -62,11 +65,11 @@ const crearUsuarios = async (req, res = response) => {
         });
 
             const adminNotifyEmail = {
-            from: `"Soporte ZlipMenu | CRM" <${process.env.USER_EMAIL}>`, 
+            from: `"Soporte Condo App Parque Central" <${process.env.USER_EMAIL}>`, 
             to: 'mercadocreativo@gmail.com',
             subject: `Nuevo usuario registrado: ${usuario.username}`,
             html: `
-                <h2>¡Nuevo usuario en Zlipmenu | CRM!</h2>
+                <h2>¡Nuevo usuario en Condo App Parque Central!</h2>
                 <p>Un nuevo usuario se ha registrado con éxito:</p>
                 <ul>
                     <li><strong>Username:</strong> ${usuario.username}</li>
@@ -297,8 +300,8 @@ const actualizarUsuarioRole = async (req, res = response) => {
         // Send welcome email if role changed
         if (campos.role && usuarioDB.role !== campos.role && usuarioActualizado.email) {
             const transporter = nodemailer.createTransport({
-                host: "zlipmenu.com",
-                port: 465,
+                host: process.env.HOST_GMAIL,
+                port: process.env.PORT_GMAIL,
                 secure: true,
                 auth: {
                     user: env.USER_EMAIL,
@@ -311,7 +314,7 @@ const actualizarUsuarioRole = async (req, res = response) => {
 
 
             const mailOptions = {
-                from: `"Soporte ZlipMenu | CRM" <${process.env.USER_EMAIL}>`, 
+                from: `"Soporte Condo App Parque Central" <${process.env.USER_EMAIL}>`, 
                 to: usuarioActualizado.email,
                 subject: '¡Bienvenido! Tu rol ha sido actualizado',
                 html: `
@@ -399,8 +402,8 @@ function set_token_recovery(req, res) {
 
 
     var transporter = nodemailer.createTransport(smtpTransport({
-        host: "zlipmenu.com",
-        port: 465,
+        host: process.env.HOST_GMAIL,
+        port: process.env.PORT_GMAIL,
         secure: true,
         auth: {
             user: process.env.USER_EMAIL,
@@ -495,6 +498,37 @@ function newest(req, res) {
 }
 
 
+const cargarUsuariosMasivo = async (req, res) => {
+    const resultados = [];
+    
+    // Leemos el archivo desde el request (usando middleware como multer)
+    fs.createReadStream(req.file.path)
+        .pipe(csv())
+        .on('data', (data) => resultados.push(data))
+        .on('end', async () => {
+            try {
+                const usuariosProcesados = resultados.map(u => ({
+                    username: u.username,
+                    email: u.email,
+                    // Hasheamos una clave temporal o una por defecto
+                    password: bcrypt.hashSync(u.password || 'Condo1234', 10),
+                    numdoc: u.numdoc,
+                    role: u.role || 'USER_ROLE',
+                    terminos: true
+                }));
+
+                // insertMany es genial para velocidad, ignora duplicados con ordered: false
+                await Usuario.insertMany(usuariosProcesados, { ordered: false });
+                
+                res.json({ msg: 'Carga masiva completada con éxito' });
+            } catch (error) {
+                res.status(400).json({ msg: 'Error en carga masiva', error });
+            } finally {
+                fs.unlinkSync(req.file.path); // Borra el archivo temporal
+            }
+        });
+};
+
 
 
 module.exports = {
@@ -508,5 +542,6 @@ module.exports = {
     verify_token_recovery,
     change_password,
     newest,
-    actualizarUsuarioRole
+    actualizarUsuarioRole,
+    cargarUsuariosMasivo
 };

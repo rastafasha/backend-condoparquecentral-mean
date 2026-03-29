@@ -322,11 +322,11 @@ function enviarFactura(req, res) {
     }
 
     // Configurar el correo con el archivo recibido
-    const texto = `Hola ${req.body.nombrecliente}! Adjunto encontraras la factura de tu compra.`;
+    const texto = `Hola ${req.body.nombrecliente}! Adjunto encontraras la factura de tu pago.`;
     const mailOptions = {
-        from: `"Condominio Parque Central" <${process.env.USER_EMAIL}>`,
+        from: `"Soporte Condo App Parque Central" <${process.env.USER_EMAIL}>`,
         to: req.body.emailcliente,
-        subject: `¡Hola ${req.body.nombrecliente}! Te enviamos la factura de tu compra`,
+        subject: `¡Hola ${req.body.nombrecliente}! Te enviamos la factura de tu pago`,
         text: texto,
         attachments: [
             {

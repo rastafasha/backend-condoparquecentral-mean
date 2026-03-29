@@ -8,31 +8,36 @@ const usuariosData = [
         username: 'Super',
         email: 'superadmin@superadmin.com',
         password: 'password',
-        role: 'SUPERADMIN_ROLE'
+        role: 'SUPERADMIN_ROLE',
+        numdoc: '1234567890',
     },
     {
         username: 'Admin',
         email: 'admin@admin.com',
         password: 'password',
-        role: 'ADMIN_ROLE'
+        role: 'ADMIN_ROLE',
+        numdoc: '1854567890',
     },
     {
         username: 'Juan',
         email: 'juan@propietario.com',
         password: 'password',
-        role: 'USER_ROLE'
+        role: 'USER_ROLE',
+        numdoc: '178967890',
     },
     {
         username: 'Ana',
         email: 'ana@propietaria.com',
         password: 'password',
-        role: 'USER_ROLE'
+        role: 'USER_ROLE',
+        numdoc: '18527890',
     },
     {
         username: 'Carlos',
         email: 'carlos@propietario.com',
         password: 'password',
-        role: 'USER_ROLE'
+        role: 'USER_ROLE',
+        numdoc: '1624567890',
     }
 ];
 

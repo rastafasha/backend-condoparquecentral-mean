@@ -64,6 +64,7 @@ const googleSignIn = async(req, res = response) => {
             usuario = new Usuario({
                 nombre: name,
                 email,
+                numdoc: '',
                 password: '@@@',
                 img: picture,
                 google: true
