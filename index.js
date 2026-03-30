@@ -30,7 +30,7 @@ const server = require('http').Server(app);
 // Initialize socket.io with the server
 const allowedOrigins = [
   "http://localhost:4200",
-  // "https://facturacion.vercel.app",
+  "https://admin-condo-pc.vercel.app",
 ];
 
 // Configuración compartida
@@ -57,8 +57,8 @@ const io = socketIO(server, {
   cors: corsOptions
 });
 app.use((req, res, next) => {
-    req.io = io; // Inyectamos io en la petición
-    next();
+  req.io = io; // Inyectamos io en la petición
+  next();
 });
 
 // Export io for use in other modules
@@ -80,7 +80,7 @@ const startServer = async () => {
   app.use('/api/auth', require('./routes/auth'));
   app.use('/api/usuarios', require('./routes/usuarios'));
   app.use('/api/profile', require('./routes/profile'));
-app.use('/api/uploads', require('./routes/uploads'));
+  app.use('/api/uploads', require('./routes/uploads'));
 
   app.use('/api/uploads', require('./routes/uploads'));
   app.use('/api/todo', require('./routes/busquedas'));
@@ -95,7 +95,7 @@ app.use('/api/uploads', require('./routes/uploads'));
   app.use('/api/locales', require('./routes/local'));
   app.use('/api/oficinas', require('./routes/oficina'));
   app.use('/api/contactos', require('./routes/contacto'));
-  
+
 
 
   // Se ejecuta el día 1 de cada mes a las 00:00
