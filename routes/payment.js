@@ -30,7 +30,9 @@ const upload = multer({ storage: storage });
 router.get('/', 
     // validarJWT, 
     getPayments);
-router.get('/monthlyreport',  validarJWT, getMonthlyReport);
+router.get('/monthlyreport', 
+    //  validarJWT,
+    getMonthlyReport);
 
 router.get('/:id',  validarJWT, getPayment);
 router.get('/user/:id', validarJWT, getPaymentsByUser);

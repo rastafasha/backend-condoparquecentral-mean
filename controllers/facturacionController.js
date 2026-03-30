@@ -366,6 +366,25 @@ const listarPaymentPorStatus = async (req, res) => {
     }
 }
 
+const listarStatusFacturas = async (req, res) => {
+    try {
+        // Ejecutamos los conteos en paralelo para máxima velocidad
+        const [pagadas, pendientes, anuladas] = await Promise.all([
+            Facturacion.countDocuments({ estado: 'PAGADO' }),
+            Facturacion.countDocuments({ estado: 'PENDIENTE' }),
+            Facturacion.countDocuments({ estado: 'ANULADO' })
+        ]);
+
+        // Retornamos un objeto estructurado para el gráfico
+        res.status(200).json({
+            labels: ['Pagado', 'Pendiente', 'Anulado'],
+            data: [pagadas, pendientes, anuladas]
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
 
 module.exports = {
     generarFacturaDinamica,
@@ -373,5 +392,6 @@ module.exports = {
     getFacturaciones,
     getFactura,
     escribirPDF,
-    listarPaymentPorStatus
+    listarPaymentPorStatus,
+    listarStatusFacturas
 };

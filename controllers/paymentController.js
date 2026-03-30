@@ -193,58 +193,56 @@ const getMonthlyReport = async (req, res) => {
             return res.status(400).json({ ok: false, msg: "Mes y año requeridos" });
         }
 
-        // 1. Buscamos todas las facturas PAGADAS de ese mes
-        // (Podemos reportar sobre Facturacion para ver lo devengado o sobre Payment para ver lo recaudado)
         const report = await Facturacion.aggregate([
-            {
-                $match: {
-                    mes: month,
-                    anio: year,
-                    estado: 'PAGADO' // Solo lo que ya entró a caja
-                }
-            },
-            {
-                $unwind: "$detalles" // Desglosamos cada concepto de la factura
-            },
+            { $match: { mes: month, anio: year, estado: 'PAGADO' } },
             {
                 $group: {
                     _id: null,
-                    // Totales por tipo de propiedad
                     totalResidencias: {
-                        $sum: { $cond: [{ $eq: ["$detalles.origen", "RESIDENCIA"] }, "$detalles.montoBase", 0] }
+                        $sum: {
+                            $reduce: {
+                                input: "$detalles",
+                                initialValue: 0,
+                                in: { $add: ["$$value", { $cond: [{ $eq: ["$$this.origen", "RESIDENCIA"] }, "$$this.montoBase", 0] }] }
+                            }
+                        }
                     },
-                    totalOficinas: {
-                        $sum: { $cond: [{ $eq: ["$detalles.origen", "OFICINA"] }, "$detalles.montoBase", 0] }
-                    },
-                    totalLocales: {
-                        $sum: { $cond: [{ $eq: ["$detalles.origen", "LOCAL"] }, "$detalles.montoBase", 0] }
-                    },
-                    // Impuestos y Otros
-                    totalIVA: { $sum: { $multiply: ["$detalles.montoBase", { $divide: ["$porcentajeIva", 100] }] } },
-                    totalRetenciones: { $sum: "$retencionIva" },
-                    totalOtrosCargos: { $sum: "$otrosCargos" },
-                    // Gran Total Recaudado
-                    recaudacionNeta: { $sum: "$totalPagar" } // Usando el campo que calculamos
+                    totalIVA: { $sum: { $sum: "$detalles.montoIva" } },
+                    totalOtros: { $sum: "$otrosCargos" },
+                    // Cálculo manual del total ya que el virtual no funciona en aggregate
+                    recaudacionNeta: { 
+                        $sum: { 
+                            $subtract: [
+                                { $add: [{ $sum: "$detalles.montoBase" }, { $sum: "$detalles.montoIva" }, "$otrosCargos"] },
+                                "$montoRetencion"
+                            ]
+                        }
+                    }
                 }
             }
         ]);
 
-        // 2. También es útil saber cuánto falta por cobrar (Morosidad)
         const morosidad = await Facturacion.aggregate([
             { $match: { mes: month, anio: year, estado: 'PENDIENTE' } },
-            { $group: { _id: null, montoPendiente: { $sum: "$totalPagar" }, cantidad: { $sum: 1 } } }
+            { 
+                $group: { 
+                    _id: null, 
+                    montoPendiente: { 
+                        $sum: { $add: [{ $sum: "$detalles.montoBase" }, { $sum: "$detalles.montoIva" }, "$otrosCargos"] } 
+                    },
+                    cantidad: { $sum: 1 } 
+                } 
+            }
         ]);
 
         res.json({
             ok: true,
-            periodo: `${month}-${year}`,
-            recaudado: report[0] || { msg: "Sin recaudación este mes" },
+            recaudado: report[0] || { recaudacionNeta: 0, totalResidencias: 0, totalIVA: 0 },
             pendiente: morosidad[0] || { montoPendiente: 0, cantidad: 0 }
         });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ ok: false, msg: 'Error al generar reporte administrativo' });
+        res.status(500).json({ ok: false, msg: 'Error en reporte' });
     }
 };
 
