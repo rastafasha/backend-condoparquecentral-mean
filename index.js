@@ -138,12 +138,6 @@ const startServer = async () => {
     });
   });
 
-  // Solo iniciar servidor local si no estamos en Vercel
-  // if (process.env.VERCEL !== '1') {
-  //     server.listen(process.env.PORT, () => {
-  //         console.log('Servidor en puerto: ' + process.env.PORT);
-  //     });
-  // }
 };
 
 // Start the server
@@ -152,18 +146,23 @@ startServer().catch(err => {
   process.exit(1);
 });
 
-// For traditional server (including Render.com)
-const PORT = process.env.PORT || 5000;
+const startApp = async () => {
+  try {
+    // 1. Forzamos la conexión. Si falla, saltará al catch.
+    await dbConnection(); 
+    
+    // 2. Solo después de conectar, abrimos el puerto para Render
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`✅ Servidor en puerto: ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Fallo crítico al arrancar:', error);
+    process.exit(1);
+  }
+};
 
-// Only start the HTTP server if not in serverless mode (Vercel)
-// On Render, we need to start the server normally (not serverless)
-// On Vercel, we export the handler for serverless
-if (process.env.VERCEL !== '1') {
-  server.listen(PORT, () => {
-    console.log(`✅ Servidor ejecutándose en puerto: ${PORT}`);
-    console.log(`🌐 Entorno: ${isRender ? 'Render.com' : 'Local/Production'}`);
-  });
-}
+startApp();
 
 // Export for serverless platforms (Vercel)
 if (typeof serverless !== 'undefined' && serverless) {

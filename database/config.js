@@ -54,7 +54,6 @@ const dbConnection = async () => {
             console.log('MongoDB reconectado');
         });
 
-        console.log("Valor de la variable:", process.env.DB_MONGO);
         
     } catch (error) {
         console.error('❌ Error al conectar con MongoDB:', error.message);
