@@ -12,28 +12,31 @@ const paymentsDataTemplate = [
         bank_destino: 'Banesco',
         referencia: 'PM-SUPER-001',
         status: 'APROBADO',
-        img: 'https://example.com/pago1.jpg'
+        tasaBCV: 35.5
     },
     {
         amount: 621,
         metodo_pago: 'ZELLE',
         bank_destino: 'Mercantil',
         referencia: 'ZELLE-SUPER-002',
-        status: 'PENDIENTE'
+        status: 'PENDIENTE',
+        tasaBCV: 35.5,
     },
     {
         amount: 812,
         metodo_pago: 'TRANSFERENCIA',
         bank_destino: 'Provincial',
         referencia: 'TRF-SUPER-003',
-        status: 'APROBADO'
+        status: 'APROBADO',
+        tasaBCV: 35.5
     },
     {
         amount: 605,
         metodo_pago: 'EFECTIVO',
         bank_destino: 'Caja Admin',
         referencia: 'EF-SUPER-004',
-        status: 'RECHAZADO'
+        status: 'RECHAZADO',
+        tasaBCV: 35.5
     },
 
     // Admin
@@ -42,28 +45,32 @@ const paymentsDataTemplate = [
         metodo_pago: 'PAGO_MOVIL',
         bank_destino: 'Banesco',
         referencia: 'PM-ADMIN-005',
-        status: 'PENDIENTE'
+        status: 'PENDIENTE',
+        tasaBCV: 35.5
     },
     {
         amount: 406,
         metodo_pago: 'ZELLE',
         bank_destino: 'Venezuela',
         referencia: 'ZELLE-ADMIN-006',
-        status: 'APROBADO'
+        status: 'APROBADO',
+        tasaBCV: 35.5
     },
     {
         amount: 605,
         metodo_pago: 'TRANSFERENCIA',
         bank_destino: 'Banesco',
         referencia: 'TRF-ADMIN-007',
-        status: 'APROBADO'
+        status: 'APROBADO',
+        tasaBCV: 35.5
     },
     {
         amount: 588,
         metodo_pago: 'EFECTIVO',
         bank_destino: 'Caja',
         referencia: 'EF-ADMIN-008',
-        status: 'PENDIENTE'
+        status: 'PENDIENTE',
+        tasaBCV: 35.5
     },
 
     // User
@@ -72,28 +79,32 @@ const paymentsDataTemplate = [
         metodo_pago: 'PAGO_MOVIL',
         bank_destino: 'Mercantil',
         referencia: 'PM-USER-009',
-        status: 'APROBADO'
+        status: 'APROBADO',
+        tasaBCV: 35.5
     },
     {
         amount: 610,
         metodo_pago: 'ZELLE',
         bank_destino: 'Banesco',
         referencia: 'ZELLE-USER-010',
-        status: 'APROBADO'
+        status: 'APROBADO',
+        tasaBCV: 35.5
     },
     {
         amount: 607,
         metodo_pago: 'TRANSFERENCIA',
         bank_destino: 'Provincial',
         referencia: 'TRF-USER-011',
-        status: 'PENDIENTE'
+        status: 'PENDIENTE',
+        tasaBCV: 35.5
     },
     {
         amount: 812,
         metodo_pago: 'EFECTIVO',
         bank_destino: 'Admin',
         referencia: 'EF-USER-012',
-        status: 'RECHAZADO'
+        status: 'RECHAZADO',
+        tasaBCV: 35.5
     }
 ];
 
@@ -125,7 +136,8 @@ const seedPayments = async () => {
             return {
                 ...tmpl,
                 cliente: users[userIndex]._id,
-                factura: factura?._id || new mongoose.Types.ObjectId()
+                factura: factura?._id || new mongoose.Types.ObjectId(),
+                img: `https://picsum.photos/200/300?random=${index + 1}`,
             };
         });
 

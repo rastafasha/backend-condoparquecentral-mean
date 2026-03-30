@@ -1,7 +1,7 @@
 const fs = require('fs');
 const Profile = require('../models/profile');
 const Payment = require('../models/payment');
-const Facturacion = require('../models/facturacion');
+const Transferencia = require('../models/transferencia');
 const borrarImagen = (path) => {
 
     if (fs.existsSync(path)) {
@@ -45,18 +45,18 @@ const actualizarImagen = async(tipo, id, nombreArchivo) => {
             await payment.save();
             return true;
             break;
-         case 'facturas':
-            const factura = await Facturacion.findById(id);
-            if (!factura) {
-                console.log('No es una factura por id');
+         case 'transferencias':
+            const transferencia = await Transferencia.findById(id);
+            if (!transferencia) {
+                console.log('No es una transferencia por id');
                 return false;
             }
-            pathViejo = `./uploads/facturas/${factura.img}`;
+            pathViejo = `./uploads/transferencias/${transferencia.img}`;
 
             borrarImagen(pathViejo);
 
-            factura.img = nombreArchivo;
-            await factura.save();
+            transferencia.img = nombreArchivo;
+            await transferencia.save();
             return true;
             break;
 

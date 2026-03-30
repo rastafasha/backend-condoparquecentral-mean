@@ -54,6 +54,7 @@ const createPayment = async (req, res) => {
             bank_destino,
             fecha_verificacion,
             facturaId,
+            tasaBCV,
         } = req.body;
 
         // Validación de seguridad: que los IDs no vengan vacíos
@@ -74,6 +75,7 @@ const createPayment = async (req, res) => {
             metodo_pago,
             bank_destino,
             fecha_verificacion,
+            tasaBCV,
             factura: facturaId,
         });
 

@@ -9,7 +9,11 @@ const TransferenciaSchema = Schema({
     factura: { type: Schema.Types.ObjectId, ref: 'Facturacion', required: true },
     
     // Datos del pago
-    metodo_pago: { type: String, required: true }, // Ej: "Pago Móvil", "Zelle"
+    metodo_pago: { 
+        type: String, 
+        enum: ['TRANSFERENCIA', 'PAGO_MOVIL', 'EFECTIVO', 'ZELLE'], 
+        required: false 
+    },
     bankName: { type: String, required: true },
     amount: { type: Number, required: true }, // Cambiado a Number para cálculos
     referencia: { type: String, required: true, unique: true },
