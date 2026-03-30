@@ -207,6 +207,25 @@ const updateStatus = async(req, res) =>{
 }
 
 
+const listarPorStatus = async (req, res) => {
+    var status = req.params['status'];
+    try {
+        // First, find the category by name
+        const transferencia = await Transferencia.findOne({ status: status });
+        
+        if (!transferencia) {
+            return res.status(404).json({ message: 'Pago no encontrado' });
+        }
+        
+        // Then, find projects using the category's ObjectId
+        const transferencias = await Transferencia.find({ status: status });
+        
+        res.status(200).send({ transferencias: transferencias });
+    } catch (err) {
+        res.status(500).send({ error: err });
+    }
+}
+
 
 
 module.exports = {
@@ -217,4 +236,5 @@ module.exports = {
     getTransferencia,
     listarPorUsuario,
     updateStatus,
+    listarPorStatus
 };

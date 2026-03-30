@@ -356,6 +356,24 @@ function enviarFactura(req, res) {
     })
 
 }
+const listarPaymentPorStatus = async (req, res) => {
+    var status = req.params['status'];
+    try {
+        // First, find the category by name
+        const payment = await Payment.findOne({ status: status });
+        
+        if (!payment) {
+            return res.status(404).json({ message: 'Pago no encontrado' });
+        }
+        
+        // Then, find projects using the category's ObjectId
+        const payments = await Payment.find({ status: status });
+        
+        res.status(200).send({ payments: payments });
+    } catch (err) {
+        res.status(500).send({ error: err });
+    }
+}
 
 
 
@@ -369,7 +387,8 @@ module.exports = {
     updateStatus,
     getMonthlyReport,
     validarPagoAdministrativo,
-    enviarFactura
+    enviarFactura,
+    listarPaymentPorStatus
 
 
 };

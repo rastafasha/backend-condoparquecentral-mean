@@ -4,6 +4,8 @@ const Local = require('../models/local');
 const Oficina = require('../models/oficina');
 const Residencia = require('../models/residencia');
 const Facturacion = require('../models/facturacion');
+const Payment = require('../models/payment');
+const Trasferencia = require('../models/transferencia');
 
 const getTodo = async(req, res = response) => {
     const busqueda = req.params.busqueda;
@@ -11,7 +13,7 @@ const getTodo = async(req, res = response) => {
 
     try {
         // Usamos $or para que busque en cualquiera de los campos
-        const [usuarios, oficinas, locales, residencias] = await Promise.all([
+        const [usuarios, oficinas, locales, residencias, payments,trasnferencias] = await Promise.all([
             Usuario.find({ 
                 $or: [{ username: regex }, { email: regex }] 
             }).select('-password'), // No enviar contraseñas en búsquedas
@@ -27,6 +29,18 @@ const getTodo = async(req, res = response) => {
             Residencia.find({ 
                 $or: [{ edificio: regex }, { letra: regex }, { piso: regex }] 
             }).populate('usuario', 'username email'),
+            Payment.find({ 
+                $or: [{ referencia: regex }, { amount: regex }, 
+                    { bank_destino: regex }, { status: regex }, { fecha_pago: regex },
+                    { metodo_pago: regex },
+                ] 
+            }).populate('usuario', 'username email'),
+            Transferencia.find({ 
+                $or: [{ referencia: regex }, { amount: regex }, 
+                    { bankName: regex }, { status: regex }, { fecha_pago: regex },
+                    { metodo_pago: regex },
+                ] 
+            }),
 
             Facturacion.find({ 
                 $or: [
@@ -42,7 +56,9 @@ const getTodo = async(req, res = response) => {
             oficinas,
             locales,
             residencias,
-            facturas
+            facturas,
+            payments,
+            trasnferencias
         });
     } catch (error) {
         res.status(500).json({ ok: false, msg: 'Error en la búsqueda' });
@@ -74,6 +90,18 @@ const getDocumentosColeccion = async(req, res = response) => {
                     $or: [{ nroFactura: regex }, { estado: regex }] 
                 }).populate('usuario', 'username email');
                 break;
+            case 'payments': // <-- Caso para facturas
+                data = await Payment.find({ 
+                    $or: [{ referencia: regex }, { amount: regex }, 
+                    { bank_destino: regex }, { status: regex }, { fecha_pago: regex }] 
+                }).populate('usuario', 'username email');
+                break;
+            case 'transferencias': // <-- Caso para transferencias
+                data = await Transferencia.find({ 
+                    $or: [{ referencia: regex }, { amount: regex }, 
+                    { bankName: regex }, { status: regex }, { fecha_pago: regex }] 
+                }).populate('usuario', 'username email');
+                break;
             default:
                 return res.status(400).json({ ok: false, msg: 'Tabla no válida' });
         }
@@ -84,62 +112,9 @@ const getDocumentosColeccion = async(req, res = response) => {
     }
 }
 
-const getReporteMorosos = async (req, res) => {
-    try {
-        const reporte = await Facturacion.aggregate([
-            { 
-                $match: { estado: 'PENDIENTE' } 
-            },
-            {
-                $group: {
-                    _id: "$usuario",
-                    totalDeuda: { $sum: "$totalPagar" }, // Suma del virtual o cálculo manual
-                    cantidadFacturas: { $sum: 1 },
-                    facturasDetalle: { $push: { nro: "$nroFactura", monto: "$totalPagar", mes: "$mes" } }
-                }
-            },
-            {
-                $lookup: { // Traemos los datos del usuario para saber quién es
-                    from: 'usuarios',
-                    localField: '_id',
-                    foreignField: '_id',
-                    as: 'usuarioInfo'
-                }
-            },
-            { $unwind: "$usuarioInfo" },
-            {
-                $project: {
-                    _id: 0,
-                    uid: "$_id",
-                    username: "$usuarioInfo.username",
-                    email: "$usuarioInfo.email",
-                    totalDeuda: 1,
-                    cantidadFacturas: 1,
-                    facturasDetalle: 1
-                }
-            },
-            { $sort: { totalDeuda: -1 } } // Los que más deben aparecen primero
-        ]);
-
-        // Calcular el gran total de deuda de todo el edificio
-        const sumaGlobalDeuda = reporte.reduce((acc, user) => acc + user.totalDeuda, 0);
-
-        res.json({
-            ok: true,
-            totalGlobalPendiente: sumaGlobalDeuda.toFixed(2),
-            cantidadMorosos: reporte.length,
-            morosos: reporte
-        });
-
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ ok: false, msg: 'Error al generar reporte de morosos' });
-    }
-};
 
 module.exports = {
     getTodo,
     getDocumentosColeccion,
-    getReporteMorosos
 }
 

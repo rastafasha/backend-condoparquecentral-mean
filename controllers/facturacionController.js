@@ -346,10 +346,32 @@ const escribirPDF = (data, res) => {
     doc.end();
 };
 
+
+const listarPaymentPorStatus = async (req, res) => {
+    var estado = req.params['estado'];
+    try {
+        // First, find the category by name
+        const factura = await Facturacion.findOne({ estado: estado });
+        
+        if (!factura) {
+            return res.status(404).json({ message: 'Pago no encontrado' });
+        }
+        
+        // Then, find projects using the category's ObjectId
+        const facturas = await Facturacion.find({ estado: estado });
+        
+        res.status(200).send({ facturas: facturas });
+    } catch (err) {
+        res.status(500).send({ error: err });
+    }
+}
+
+
 module.exports = {
     generarFacturaDinamica,
     generarFacturacionMensualMasiva,
     getFacturaciones,
     getFactura,
-    escribirPDF
+    escribirPDF,
+    listarPaymentPorStatus
 };

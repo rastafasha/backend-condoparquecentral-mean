@@ -10,9 +10,7 @@ const { validarJWT } = require('../middlewares/validar-jwt');
 router.get('/:busqueda',
     // [validarJWT], 
     getTodo);
-router.get('/reporte-morosos',
-    // [validarJWT], 
-    getReporteMorosos);
+
 router.get('/coleccion/:tabla/:busqueda',
     // [validarJWT], 
     getDocumentosColeccion);

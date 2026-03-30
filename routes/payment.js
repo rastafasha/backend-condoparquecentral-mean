@@ -14,7 +14,8 @@ const {
     updateStatus,
     getMonthlyReport,
     validarPagoAdministrativo,
-    enviarFactura
+    enviarFactura,
+    listarPaymentPorStatus
 } = require('../controllers/paymentController.js');
 
 const { validarJWT } = require('../middlewares/validar-jwt');
@@ -33,6 +34,7 @@ router.get('/monthlyreport',  validarJWT, getMonthlyReport);
 
 router.get('/:id',  validarJWT, getPayment);
 router.get('/user/:id', validarJWT, getPaymentsByUser);
+router.get('/status/:status',   listarPaymentPorStatus);
 
 
 router.post('/store', [
