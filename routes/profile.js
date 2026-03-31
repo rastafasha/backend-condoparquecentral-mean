@@ -12,8 +12,8 @@ const {
     actualizarProfile,
     borrarProfile,
     listarProfilePorUsuario,
-    getProfilesrole,
-    obtenerEstadoCuentaUsuario
+    obtenerEstadoCuentaUsuario,
+    agregarPropiedadExtra
 } = require('../controllers/profileController');
 
 const {
@@ -33,6 +33,11 @@ router.post('/crear', [
     validarJWT,
     validarCampos
 ], crearProfile);
+
+router.post('/crearpropiedadextra', [
+    validarJWT,
+    validarCampos
+], agregarPropiedadExtra);
 
 
 router.put('/editar/:id', [

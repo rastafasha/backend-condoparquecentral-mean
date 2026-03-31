@@ -128,6 +128,60 @@ const actualizarProfile = async(req, res) => {
     }
 };
 
+const agregarPropiedadExtra = async(req, res) => {
+    // El 'uid' viene del validarJWT
+    const uid = req.uid; 
+    const { tipo, datos } = req.body; 
+    // tipo: 'residencia', 'oficina', 'local'
+    // datos: { edificio, piso, letra }
+
+    try {
+        // 1. Buscamos el perfil del usuario logueado
+        const profileDB = await Profile.findOne({ usuario: uid });
+        if (!profileDB) {
+            return res.status(404).json({ ok: false, msg: 'Perfil no encontrado' });
+        }
+
+        let nuevaUbicacion;
+        let campoPerfil = tipo; // El nombre del campo en el Schema (residencia, oficina, local)
+
+        // 2. Instanciamos según el tipo
+        if (tipo === 'residencia') nuevaUbicacion = new Residencia(datos);
+        else if (tipo === 'oficina') nuevaUbicacion = new Oficina(datos);
+        else if (tipo === 'local') nuevaUbicacion = new Local(datos);
+        else return res.status(400).json({ ok: false, msg: 'Tipo de propiedad no válido' });
+
+        // 3. Guardamos en la colección hija
+        const ubicacionGuardada = await nuevaUbicacion.save();
+
+        // 4. Actualizamos el Perfil usando $push para no borrar lo que ya existe
+        // También ponemos el switch 'have...' en true por si acaso estaba en false
+        const campoSwitch = `have${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`;
+        
+        const perfilActualizado = await Profile.findByIdAndUpdate(
+            profileDB._id, 
+            { 
+                $push: { [campoPerfil]: ubicacionGuardada._id },
+                [campoSwitch]: true 
+            }, 
+            { new: true }
+        );
+
+        res.json({
+            ok: true,
+            msg: `${tipo} agregada con éxito`,
+            perfil: perfilActualizado
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            ok: false,
+            msg: 'Error inesperado, hable con el administrador'
+        });
+    }
+};
+
 const getProfiles = async(req, res) => {
 
     const profiles = await Profile.find()
@@ -311,7 +365,8 @@ module.exports = {
     borrarProfile,
     listarProfilePorUsuario,
     getProfilesrole,
-    obtenerEstadoCuentaUsuario
+    obtenerEstadoCuentaUsuario,
+    agregarPropiedadExtra
 
 
 };
