@@ -29,22 +29,26 @@ const server = require('http').Server(app);
 
 // Initialize socket.io with the server
 const allowedOrigins = [
-  "http://localhost:4200",
-  "https://admin-condo-pc.vercel.app",
+  "http://localhost:4200", // local
+  "http://localhost:4207", // local propietarios
+  "https://admin-condo-pc.vercel.app", // remoto 
 ];
 
 // Configuración compartida
 const corsOptions = {
-  origin: (origin, callback) => {
-    // Si el origen está en la lista o es una petición local (sin origen)
-    if (!origin || allowedOrigins.includes(origin)) {
+  origin: function (origin, callback) {
+    // Permitir peticiones sin origin (como Postman o servidores)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error('Origin no permitido por CORS'));
+      console.log("Origen bloqueado por CORS:", origin); // Esto saldrá en el log de Render
+      callback(new Error('Not allowed by CORS'));
     }
   },
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   optionsSuccessStatus: 204
 };
 

@@ -1,16 +1,44 @@
 const { response } = require('express');
 const Profile = require('../models/profile');
 const Facturacion = require('../models/facturacion');
+const Residencia = require('../models/residencia'); // Ajusta la ruta a tus modelos
+const Oficina = require('../models/oficina');
+const Local = require('../models/local');
 
 const crearProfile = async(req, res) => {
-
     const uid = req.uid;
-    const profile = new Profile({
-        usuario: uid,
-        ...req.body
-    });
+    const { residencia, oficina, local, ...datosPerfil } = req.body;
 
     try {
+        const IDs_Ubicacion = {};
+
+        // 1. Si viene data de Residencia, crear el documento primero
+        if (residencia && residencia.length > 0) {
+            const nuevaRes = new Residencia(residencia[0]);
+            const resDB = await nuevaRes.save();
+            IDs_Ubicacion.residencia = [resDB._id];
+        }
+
+        // 2. Si viene data de Oficina, crear el documento
+        if (oficina && oficina.length > 0) {
+            const nuevaOfi = new Oficina(oficina[0]);
+            const ofiDB = await nuevaOfi.save();
+            IDs_Ubicacion.oficina = [ofiDB._id];
+        }
+
+        // 3. Si viene data de Local, crear el documento
+        if (local && local.length > 0) {
+            const nuevoLoc = new Local(local[0]);
+            const locDB = await nuevoLoc.save();
+            IDs_Ubicacion.local = [locDB._id];
+        }
+
+        // 4. Crear el Perfil con los IDs obtenidos
+        const profile = new Profile({
+            usuario: uid,
+            ...datosPerfil,
+            ...IDs_Ubicacion // Esto añade los arrays de IDs correctos
+        });
 
         const profileDB = await profile.save();
 
@@ -23,49 +51,81 @@ const crearProfile = async(req, res) => {
         console.log(error);
         res.status(500).json({
             ok: false,
-            msg: 'Hable con el admin'
+            msg: 'Error al crear el perfil, hable con el admin'
         });
     }
-
-
 };
 
-const actualizarProfile = async(req, res) => {
 
+const actualizarProfile = async(req, res) => {
     const id = req.params.id;
     const uid = req.uid;
 
     try {
-
-        const profile = await Profile.findById(id);
-        if (!profile) {
-            return res.status(500).json({
-                ok: false,
-                msg: 'profile no encontrado por el id'
-            });
+        const profileDB = await Profile.findById(id);
+        if (!profileDB) {
+            return res.status(404).json({ ok: false, msg: 'Perfil no encontrado' });
         }
 
+        // 1. Extraemos los objetos para procesarlos y que NO queden en 'datosRestantes'
+        const { residencia, oficina, local, ...datosRestantes } = req.body;
+
+        // 2. Sincronizar RESIDENCIA
+        if (residencia && residencia.length > 0) {
+            const resData = residencia[0]; // Extraemos el objeto del array
+            if (resData._id) {
+                // Actualizamos la colección de Residencias
+                await Residencia.findByIdAndUpdate(resData._id, {
+                    edificio: resData.edificio,
+                    piso: resData.piso,
+                    letra: resData.letra
+                });
+            }
+        }
+
+        // 3. Sincronizar OFICINA
+        if (oficina && oficina.length > 0) {
+            const ofiData = oficina[0];
+            if (ofiData._id) {
+                await Oficina.findByIdAndUpdate(ofiData._id, {
+                    edificio: ofiData.edificio,
+                    piso: ofiData.piso,
+                    letra: ofiData.letra
+                });
+            }
+        }
+
+        // 4. Sincronizar LOCAL
+        if (local && local.length > 0) {
+            const locData = local[0];
+            if (locData._id) {
+                await Local.findByIdAndUpdate(locData._id, {
+                    edificio: locData.edificio,
+                    piso: locData.piso,
+                    letra: locData.letra
+                });
+            }
+        }
+
+        // 5. IMPORTANTE: Construimos el objeto de actualización del PERFIL
+        // Solo incluimos los campos básicos. NO incluimos los objetos de residencia/oficina
+        // para que Mongoose no intente validarlos como IDs.
         const cambiosProfile = {
-            ...req.body,
+            ...datosRestantes,
             usuario: uid
-        }
+        };
 
         const profileActualizado = await Profile.findByIdAndUpdate(id, cambiosProfile, { new: true });
 
         res.json({
             ok: true,
-            profileActualizado
+            profile: profileActualizado
         });
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({
-            ok: false,
-            msg: 'Error hable con el admin'
-        });
+        res.status(500).json({ ok: false, msg: 'Error al actualizar' });
     }
-
-
 };
 
 const getProfiles = async(req, res) => {
