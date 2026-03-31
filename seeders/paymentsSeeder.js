@@ -111,60 +111,45 @@ const paymentsDataTemplate = [
 const seedPayments = async () => {
     try {
         await mongoose.connect(process.env.DB_MONGO);
-        console.log('✅ Conectado a la base de datos');
-
-        // Eliminar payments existentes
         await Payment.deleteMany({});
-        console.log('✅ Payments existentes eliminados');
 
-        // Verificar dependencias
-        const usuariosPropietarios = await Usuario.find({ role: 'USER_ROLE' }).limit(3);
-        if (usuariosPropietarios.length < 3) throw new Error('Ejecuta usuarioSeeder.js - necesita 3 USER_ROLE');
-        const [juan, ana, carlos] = usuariosPropietarios;
+        const usuarios = await Usuario.find({ role: 'USER_ROLE' }).limit(3);
+        const [juan, ana, carlos] = usuarios;
 
-        const facturasPendientes = await Facturacion.find({ estado: 'PENDIENTE' });
-        if (facturasPendientes.length === 0) {
-            console.log('⚠️  No hay facturas PENDIENTE. Creando algunos payments de ejemplo anyway.');
+        const metodos = ['PAGO_MOVIL', 'ZELLE', 'TRANSFERENCIA', 'EFECTIVO'];
+        const bancos = ['Banesco', 'Mercantil', 'Provincial', 'Caja'];
+        const estados = ['APROBADO', 'PENDIENTE', 'RECHAZADO'];
+
+        const paymentsData = [];
+
+        // Generamos 20 pagos para cada uno de los 3 usuarios (60 total)
+        for (let i = 0; i < 60; i++) {
+            const userIndex = Math.floor(i / 20); // 0-19 Juan, 20-39 Ana...
+            const user = usuarios[userIndex];
+            const metodo = metodos[i % metodos.length];
+            const status = estados[i % estados.length];
+
+            paymentsData.push({
+                amount: Math.floor(Math.random() * 500) + 100,
+                metodo_pago: metodo,
+                bank_destino: bancos[i % bancos.length],
+                // REFERENCIA ÚNICA: Importante para el track de Angular
+                referencia: `${metodo.substring(0,2)}-${user.username.toUpperCase()}-${1000 + i}`,
+                status: status,
+                tasaBCV: 36.5,
+                cliente: user._id,
+                factura: new mongoose.Types.ObjectId(), // ID aleatorio para pruebas
+                fecha_pago: new Date(Date.now() - (i * 3600000 * 24)), // Fechas distintas (un día menos cada uno)
+                img: `https://picsum.photos/200/300?random=${i}`,
+            });
         }
 
-        // Asignar factura y cliente dinámicamente
-        const paymentsData = paymentsDataTemplate.map((tmpl, index) => {
-            const userIndex = Math.floor(index / 4);
-            const users = [juan, ana, carlos];
-            const factura = facturasPendientes[Math.floor(Math.random() * facturasPendientes.length)] || null;
-
-            return {
-                ...tmpl,
-                cliente: users[userIndex]._id,
-                factura: factura?._id || new mongoose.Types.ObjectId(),
-                img: `https://picsum.photos/200/300?random=${index + 1}`,
-            };
-        });
-
-        const paymentsGuardados = await Payment.insertMany(paymentsData);
-        console.log('✅ 12 Payments insertados correctamente');
-
-        // Logs detallados con populate
-        const paymentsConDetalle = await Payment.find()
-            .populate('cliente', 'username email')
-            .populate('factura', 'nroFactura totalPagar estado')
-            .populate('usuario_validador', 'username');
-        
-        paymentsConDetalle.forEach((payment, index) => {
-            console.log(`   ${index + 1}. Ref: ${payment.referencia}`);
-            console.log(`      Cliente: ${payment.cliente?.username} (${payment.cliente?.email})`);
-            console.log(`      Monto: $${payment.amount.toFixed(2)} | Método: ${payment.metodo_pago}`);
-            console.log(`      Status: ${payment.status} | Factura: ${payment.factura?.nroFactura || 'Sin factura'}`);
-            console.log(`      ID Cliente: ${payment.cliente?._id}`);
-            console.log('');
-        });
-
+        await Payment.insertMany(paymentsData);
+        console.log('✅ 60 Payments insertados con referencias únicas');
         mongoose.connection.close();
-        console.log('✅ Conexión cerrada');
     } catch (error) {
-        console.error('❌ Error al ejecutar el seeder:', error.message);
+        console.error('❌ Error:', error);
         mongoose.connection.close();
-        process.exit(1);
     }
 };
 

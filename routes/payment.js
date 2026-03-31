@@ -28,14 +28,16 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 router.get('/', 
-    // validarJWT, 
+    validarJWT, 
     getPayments);
 router.get('/monthlyreport', 
-    //  validarJWT,
+     validarJWT,
     getMonthlyReport);
 
 router.get('/:id',  validarJWT, getPayment);
-router.get('/user/:id', validarJWT, getPaymentsByUser);
+router.get('/user/:id',
+    //  validarJWT, 
+     getPaymentsByUser);
 router.get('/status/:status',   listarPaymentPorStatus);
 
 

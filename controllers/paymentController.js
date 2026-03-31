@@ -22,23 +22,48 @@ const getPayments = async (req, res) => {
 };
 
 const getPaymentsByUser = async (req, res) => {
-    const userId = req.params.id; // El ID del vendedor/admin que queremos consultar
+    const userId = req.params.id;
+    
+    // 1. Obtenemos page y limit de la query (?page=1&limit=10)
+    // Usamos valores por defecto si no vienen en la URL
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
     try {
-        // Buscamos pagos donde este usuario aparezca en la repartición
+        // 2. Ejecutamos la consulta con skip y limit
         const payments = await Payment.find({
             $or: [
                 { "reparticion.vendedor.id": userId },
                 { "reparticion.admin.id": userId },
                 { "reparticion.ceo.id": userId }
             ]
-        }).populate('cliente', 'nombre email');
+        })
+        .populate('cliente', 'nombre email')
+        .sort({ fecha_pago: -1 }) // Ordenar por fecha (opcional pero recomendado para Instagram-style)
+        .skip(skip)               // Salta los registros de páginas anteriores
+        .limit(limit);            // Trae solo la cantidad solicitada
 
-        res.json({ ok: true, payments });
+        // 3. (Opcional) Contar total para que el front sepa cuándo parar
+        const total = await Payment.countDocuments({
+            $or: [
+                { "reparticion.vendedor.id": userId },
+                { "reparticion.admin.id": userId },
+                { "reparticion.ceo.id": userId }
+            ]
+        });
+
+        res.json({ 
+            ok: true, 
+            payments,
+            total,
+            pages: Math.ceil(total / limit) 
+        });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ ok: false, msg: 'Error al obtener reportes' });
     }
 };
-
 const createPayment = async (req, res) => {
     try {
         // Desestructuramos lo que viene de Angular
