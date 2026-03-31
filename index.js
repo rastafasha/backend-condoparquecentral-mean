@@ -32,6 +32,7 @@ const allowedOrigins = [
   "http://localhost:4200", // local
   "http://localhost:4207", // local propietarios
   "https://admin-condo-pc.vercel.app", // remoto 
+  "https://propietarios-corpocapital-pc.vercel.app", // remoto propietarios
 ];
 
 // Configuración compartida
