@@ -122,23 +122,42 @@ const seedPayments = async () => {
 
         const paymentsData = [];
 
+        // 1. Buscamos facturas existentes
+        let facturas = await Facturacion.find();
+        // 2. SI NO HAY FACTURAS, CREAMOS UNA DE PRUEBA RÁPIDA
+        if (facturas.length === 0) {
+            console.log('⚠️ Creando factura de respaldo para el seeder...');
+            const nuevaFactura = new Facturacion({
+                nroFactura: 'FAC-001-TEST',
+                totalPagar: 1000,
+                estado: 'PENDIENTE',
+                cliente: usuarios[0]._id // Asignada al primer usuario
+                
+            });
+            
+            await nuevaFactura.save();
+            facturas = [nuevaFactura]; // La metemos en el array para usarla
+        }
+
         // Generamos 20 pagos para cada uno de los 3 usuarios (60 total)
         for (let i = 0; i < 60; i++) {
             const userIndex = Math.floor(i / 20); // 0-19 Juan, 20-39 Ana...
             const user = usuarios[userIndex];
             const metodo = metodos[i % metodos.length];
             const status = estados[i % estados.length];
+            // Seleccionamos una factura al azar del array que ahora sí tiene datos
+        const facturaAleatoria = facturas[i % facturas.length];
 
             paymentsData.push({
                 amount: Math.floor(Math.random() * 500) + 100,
                 metodo_pago: metodo,
                 bank_destino: bancos[i % bancos.length],
                 // REFERENCIA ÚNICA: Importante para el track de Angular
-                referencia: `${metodo.substring(0,2)}-${user.username.toUpperCase()}-${1000 + i}`,
+                referencia: `${metodo.substring(0, 2)}-${user.username.toUpperCase()}-${1000 + i}`,
                 status: status,
                 tasaBCV: 36.5,
                 cliente: user._id,
-                factura: new mongoose.Types.ObjectId(), // ID aleatorio para pruebas
+                factura: facturaAleatoria._id, // ID aleatorio para pruebas
                 fecha_pago: new Date(Date.now() - (i * 3600000 * 24)), // Fechas distintas (un día menos cada uno)
                 img: `https://picsum.photos/200/300?random=${i}`,
             });

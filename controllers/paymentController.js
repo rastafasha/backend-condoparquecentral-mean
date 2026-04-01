@@ -24,34 +24,25 @@ const getPayments = async (req, res) => {
 const getPaymentsByUser = async (req, res) => {
     const userId = req.params.id;
     
-    // 1. Obtenemos page y limit de la query (?page=1&limit=10)
-    // Usamos valores por defecto si no vienen en la URL
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
     try {
-        // 2. Ejecutamos la consulta con skip y limit
-        const payments = await Payment.find({
-            $or: [
-                { "reparticion.vendedor.id": userId },
-                { "reparticion.admin.id": userId },
-                { "reparticion.ceo.id": userId }
-            ]
-        })
-        .populate('cliente', 'nombre email')
-        .sort({ fecha_pago: -1 }) // Ordenar por fecha (opcional pero recomendado para Instagram-style)
-        .skip(skip)               // Salta los registros de páginas anteriores
-        .limit(limit);            // Trae solo la cantidad solicitada
+        // 1. Definimos la consulta: solo pagos donde el cliente sea el userId
+        const query = { cliente: userId };
 
-        // 3. (Opcional) Contar total para que el front sepa cuándo parar
-        const total = await Payment.countDocuments({
-            $or: [
-                { "reparticion.vendedor.id": userId },
-                { "reparticion.admin.id": userId },
-                { "reparticion.ceo.id": userId }
-            ]
-        });
+        // 2. Ejecutamos búsqueda y conteo en paralelo para mejor rendimiento
+        const [payments, total] = await Promise.all([
+            Payment.find(query)
+                .populate('cliente', 'username email numdoc') // Datos del usuario
+                .populate('factura', 'nroFactura')           // Datos de la factura
+                .sort({ fecha_pago: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            Payment.countDocuments(query)
+        ]);
 
         res.json({ 
             ok: true, 
@@ -59,9 +50,10 @@ const getPaymentsByUser = async (req, res) => {
             total,
             pages: Math.ceil(total / limit) 
         });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ ok: false, msg: 'Error al obtener reportes' });
+        console.error('Error en getPaymentsByUser:', error);
+        res.status(500).json({ ok: false, msg: 'Error al obtener los pagos del usuario' });
     }
 };
 const createPayment = async (req, res) => {
@@ -121,33 +113,33 @@ const createPayment = async (req, res) => {
 };
 
 const getPayment = async (req, res) => {
-    try {
-        const payment = await Payment.findById(req.params.id)
-            .populate('cliente')
-            .populate({
-                path: 'reparticion.vendedor.id',
-                select: 'username',
-                model: 'Usuario'
-            })
-            .populate({
-                path: 'reparticion.admin.id',
-                select: 'username',
-                model: 'Usuario'
-            })
-            .populate({
-                path: 'reparticion.ceo.id',
-                select: 'username',
-                model: 'Usuario'
-            })
+    const id = req.params.id;
 
-        if (!payment) return res.status(404).json({ msg: 'payment not found' })
+    try {
+        const payment = await Payment.findById(id)
+            .populate('factura') // Nombre correcto según tu Schema
+            .populate('cliente', 'username email numdoc') // Traemos datos básicos del cliente
+            .populate('usuario_validador', 'username'); // Traemos quién aprobó
+
+        if (!payment) {
+            return res.status(404).json({ 
+                ok: false, 
+                msg: 'El pago no existe en la base de datos' 
+            });
+        }
+
         res.json({
             ok: true,
             payment
         });
 
     } catch (error) {
-        return res.status(404).json({ msg: 'payment not found' })
+        console.log(error);
+        // Si el ID no tiene el formato correcto de MongoDB, cae aquí
+        return res.status(500).json({ 
+            ok: false, 
+            msg: 'Error al buscar el pago, verifique el ID' 
+        });
     }
 };
 const deletePayment = async (req, res) => {

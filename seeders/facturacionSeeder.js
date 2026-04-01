@@ -131,55 +131,61 @@ const facturacionesData = [
     }
 ];
 
-const seedFacturaciones = async () => {
+const seedFacturas = async () => {
     try {
-        // Conectar a la base de datos
         await mongoose.connect(process.env.DB_MONGO);
-        console.log('✅ Conectado a la base de datos');
+        await Facturacion.deleteMany({}); // Limpiamos facturas viejas
 
-        // Eliminar facturaciones existentes
-        await Facturacion.deleteMany({});
-        console.log('✅ Facturaciones existentes eliminadas');
+        // 1. Buscamos a los usuarios reales creados por tu seeder
+        const juan = await Usuario.findOne({ email: 'juan@propietario.com' });
+        const ana = await Usuario.findOne({ email: 'ana@propietaria.com' });
+        const carlos = await Usuario.findOne({ email: 'carlos@propietario.com' });
 
-        // Obtener usuarios existentes y asignar ObjectIds
-        const usuarios = await Usuario.find({});
-        if (usuarios.length < 3) {
-            throw new Error('Ejecuta primero el usuarioSeeder.js para tener usuarios de prueba');
+        if (!juan || !ana || !carlos) {
+            throw new Error('No se encontraron los usuarios. Corre primero el seeder de usuarios.');
         }
 
-        const [superadmin, admin, user] = usuarios;
-        facturacionesData[0].usuario = superadmin._id;
-        facturacionesData[1].usuario = superadmin._id;
-        facturacionesData[2].usuario = superadmin._id;
-        facturacionesData[3].usuario = admin._id;
-        facturacionesData[4].usuario = admin._id;
-        facturacionesData[5].usuario = admin._id;
-        facturacionesData[6].usuario = user._id;
-        facturacionesData[7].usuario = user._id;
-        facturacionesData[8].usuario = user._id;
+        const usuarios = [juan, ana, carlos];
+        const facturasData = [];
 
-        // Insertar facturaciones
-        const facturacionesGuardadas = await Facturacion.insertMany(facturacionesData);
-        console.log('✅ 9 Facturaciones insertadas correctamente');
+        // 2. Generamos 15 facturas para cada uno (45 en total) para probar el scroll
+        for (let i = 0; i < 45; i++) {
+            const userIndex = Math.floor(i / 15);
+            const usuarioActual = usuarios[userIndex];
+            const mes = (i % 12) + 1;
+            const anio = 2024;
 
-        // Log detallado con populate y virtuals
-        const facturasConDetalle = await Facturacion.find().populate('usuario', 'username email');
-        facturasConDetalle.forEach((factura, index) => {
-            console.log(`   ${index + 1}. ${factura.nroFactura}`);
-            console.log(`      Usuario: ${factura.usuario?.username || 'N/A'} (${factura.usuario?.email || 'N/A'})`);
-            console.log(`      Total a pagar: $${factura.totalPagar?.toFixed(2) || 'N/A'}`);
-            console.log(`      Estado: ${factura.estado}`);
-            console.log(`      Mes: ${factura.mes}/${factura.anio}`);
-            console.log('');
-        });
+            facturasData.push({
+                usuario: usuarioActual._id, // <--- ID REAL vinculado
+                nroFactura: `FAC-${usuarioActual.username.toUpperCase()}-${202400 + i}`,
+                mes: mes,
+                anio: anio,
+                tasaBCV: 36.5,
+                detalles: [
+                    {
+                        origen: 'RESIDENCIA',
+                        montoBase: 500,
+                        ivaPorcentaje: 16,
+                        montoIva: 80,
+                        descripcion: `Cuota de mantenimiento mes ${mes}`
+                    }
+                ],
+                aplicaRetencion: i % 3 === 0, // Algunas con retención
+                montoRetencion: i % 3 === 0 ? 50 : 0,
+                otrosCargos: 0,
+                estado: i % 5 === 0 ? 'PAGADO' : 'PENDIENTE' // Mayoría pendientes
+            });
+        }
 
+        await Facturacion.insertMany(facturasData);
+        console.log('✅ 45 Facturas vinculadas correctamente a Juan, Ana y Carlos');
+        
         mongoose.connection.close();
-        console.log('✅ Conexión cerrada');
     } catch (error) {
-        console.error('❌ Error al ejecutar el seeder:', error.message);
+        console.error('❌ Error:', error.message);
         mongoose.connection.close();
-        process.exit(1);
     }
 };
 
-seedFacturaciones();
+seedFacturas();
+

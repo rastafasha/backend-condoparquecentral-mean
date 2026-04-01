@@ -12,7 +12,8 @@ const {
     getFactura,
     escribirPDF,
     listarPaymentPorStatus,
-    listarStatusFacturas
+    listarStatusFacturas,
+    getFacturasByUser
 } = require('../controllers/facturacionController');
 
 const { validarJWT } = require('../middlewares/validar-jwt');
@@ -23,6 +24,9 @@ router.get('/status/pagos',   listarStatusFacturas);
 router.get('/:id',  
     // validarJWT,
      getFactura);
+router.get('/user/:id',
+    //  validarJWT, 
+     getFacturasByUser);
 router.get('/status/:estado',   listarPaymentPorStatus);
 
 
