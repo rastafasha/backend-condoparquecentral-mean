@@ -73,6 +73,27 @@ router.put('/editarRole/:id', [
     validarCampos
 ], actualizarUsuarioRole);
 
+//notificaciones
+router.get('/enviar-prueba', validarJWT, async (req, res) => {
+    try {
+        const { sendNotification } = require('../helpers/notificaciones');
+        const usuario = await Usuario.findById(req.uid);
+
+        if (usuario.pushSubscription) {
+            await sendNotification(
+                usuario.pushSubscription, 
+                '¡Conexión Exitosa!', 
+                'Esta notificación viene directamente de tu base de datos en Render.'
+            );
+            return res.json({ ok: true, msg: 'Notificación enviada' });
+        }
+        
+        res.status(404).json({ ok: false, msg: 'No tienes suscripción activa' });
+    } catch (error) {
+        res.status(500).json({ ok: false, error });
+    }
+});
+
 
 
 
