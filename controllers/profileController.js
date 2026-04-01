@@ -5,6 +5,8 @@ const Residencia = require('../models/residencia'); // Ajusta la ruta a tus mode
 const Oficina = require('../models/oficina');
 const Local = require('../models/local');
 
+const { sendNotification } = require('../helpers/notificaciones');
+
 const crearProfile = async(req, res) => {
     const uid = req.uid;
     const { residencia, oficina, local, ...datosPerfil } = req.body;
@@ -41,6 +43,14 @@ const crearProfile = async(req, res) => {
         });
 
         const profileDB = await profile.save();
+
+        if (usuario.pushSubscription) {
+            sendNotification(
+                usuario.pushSubscription, 
+                'CorpoCapital App', 
+                'Notificaciones Activadas'
+            );
+        }
 
         res.json({
             ok: true,

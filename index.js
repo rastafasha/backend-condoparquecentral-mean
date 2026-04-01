@@ -31,6 +31,7 @@ const server = require('http').Server(app);
 const allowedOrigins = [
   "http://localhost:4200", // local
   "http://localhost:4207", // local propietarios
+  "http://127.0.0.1:8080", // local pwa
   "https://admin-condo-pc.vercel.app", // remoto 
   "https://propietarios-corpocapital-pc.vercel.app", // remoto propietarios
 ];
@@ -40,7 +41,7 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Permitir peticiones sin origin (como Postman o servidores)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -100,7 +101,7 @@ const startServer = async () => {
   app.use('/api/locales', require('./routes/local'));
   app.use('/api/oficinas', require('./routes/oficina'));
   app.use('/api/contactos', require('./routes/contacto'));
-
+ app.use('/api/notificaciones', require('./routes/notificaciones'));
 
 
   // Se ejecuta el día 1 de cada mes a las 00:00
@@ -109,17 +110,7 @@ const startServer = async () => {
     // Aquí llamarías a la lógica de tu función de arriba
   });
 
-  //notification
-  // const vapidKeys = {
-  //   "publicKey": process.env.VAPI_KEY_PUBLIC || '',
-  //   "privateKey": process.env.VAPI_KEY_PRIVATE || ''
-  // };
 
-  // webpush.setVapidDetails(
-  //   'mailto:example@youremail.com',
-  //   vapidKeys.publicKey,
-  //   vapidKeys.privateKey,
-  // );
 
   app.use(bodyParser.json());
 
@@ -154,8 +145,8 @@ startServer().catch(err => {
 const startApp = async () => {
   try {
     // 1. Forzamos la conexión. Si falla, saltará al catch.
-    await dbConnection(); 
-    
+    await dbConnection();
+
     // 2. Solo después de conectar, abrimos el puerto para Render
     const PORT = process.env.PORT || 5000;
     server.listen(PORT, '0.0.0.0', () => {

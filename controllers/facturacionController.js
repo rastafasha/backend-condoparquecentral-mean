@@ -50,19 +50,19 @@ const generarFacturacionMensualMasiva = async (req, res) => {
     try {
         // Recibimos los datos desde el modal de Angular
         const { mes, anio, porcentajeIva, tasaBCV } = req.body;
-        const precioDolar = tasaBCV || 1; 
+        const precioDolar = tasaBCV || 1;
 
         const perfiles = await Profile.find().populate('usuario residencia oficina local');
         let facturasCreadas = 0;
 
         for (let perfil of perfiles) {
             // 1. Evitar duplicados por mes/año para cada usuario
-            const facturaExistente = await Facturacion.findOne({ 
-                usuario: perfil.usuario._id, 
-                mes, 
-                anio 
+            const facturaExistente = await Facturacion.findOne({
+                usuario: perfil.usuario._id,
+                mes,
+                anio
             });
-            
+
             if (facturaExistente) continue;
 
             const detalles = [];
@@ -71,13 +71,13 @@ const generarFacturacionMensualMasiva = async (req, res) => {
 
             // A. Residencias: Siempre EXENTAS (IVA 0)
             perfil.residencia.forEach(r => {
-                detalles.push({ 
-                    origen: 'RESIDENCIA', 
-                    propiedadId: r._id, 
-                    montoBase: r.montoMensual, 
+                detalles.push({
+                    origen: 'RESIDENCIA',
+                    propiedadId: r._id,
+                    montoBase: r.montoMensual,
                     ivaPorcentaje: 0,
                     montoIva: 0,
-                    descripcion: `Residencia: ${r.edificio} - ${r.letra}` 
+                    descripcion: `Residencia: ${r.edificio} - ${r.letra}`
                 });
             });
 
@@ -85,13 +85,13 @@ const generarFacturacionMensualMasiva = async (req, res) => {
             perfil.oficina.forEach(o => {
                 const alicuota = o.ivaEspecial || porcentajeIva || 16;
                 const impuesto = o.montoMensual * (alicuota / 100);
-                detalles.push({ 
-                    origen: 'OFICINA', 
-                    propiedadId: o._id, 
-                    montoBase: o.montoMensual, 
+                detalles.push({
+                    origen: 'OFICINA',
+                    propiedadId: o._id,
+                    montoBase: o.montoMensual,
                     ivaPorcentaje: alicuota,
                     montoIva: impuesto,
-                    descripcion: `Oficina: ${o.edificio} - ${o.letra}` 
+                    descripcion: `Oficina: ${o.edificio} - ${o.letra}`
                 });
             });
 
@@ -99,13 +99,13 @@ const generarFacturacionMensualMasiva = async (req, res) => {
             perfil.local.forEach(l => {
                 const alicuota = l.ivaEspecial || porcentajeIva || 16;
                 const impuesto = l.montoMensual * (alicuota / 100);
-                detalles.push({ 
-                    origen: 'LOCAL', 
-                    propiedadId: l._id, 
-                    montoBase: l.montoMensual, 
+                detalles.push({
+                    origen: 'LOCAL',
+                    propiedadId: l._id,
+                    montoBase: l.montoMensual,
                     ivaPorcentaje: alicuota,
                     montoIva: impuesto,
-                    descripcion: `Local: ${l.edificio} - ${l.letra}` 
+                    descripcion: `Local: ${l.edificio} - ${l.letra}`
                 });
             });
 
@@ -116,14 +116,14 @@ const generarFacturacionMensualMasiva = async (req, res) => {
                     { $inc: { secuencia: 1 } },
                     { new: true, upsert: true }
                 );
-                
+
                 const nroFacturaFinal = `FAC-${anio}-${contadorDoc.secuencia.toString().padStart(5, '0')}`;
 
                 const nuevaFactura = new Facturacion({
                     usuario: perfil.usuario._id,
                     nroFactura: nroFacturaFinal,
-                    mes, 
-                    anio, 
+                    mes,
+                    anio,
                     detalles,
                     tasaBCV: precioDolar,
                     aplicaRetencion: perfil.esAgenteRetencion || false, // Heredado del perfil
@@ -137,8 +137,8 @@ const generarFacturacionMensualMasiva = async (req, res) => {
 
         res.json({
             ok: true,
-            msg: facturasCreadas > 0 
-                ? `Proceso completado. Se generaron ${facturasCreadas} facturas.` 
+            msg: facturasCreadas > 0
+                ? `Proceso completado. Se generaron ${facturasCreadas} facturas.`
                 : "No se generaron facturas nuevas (ya estaban al día)."
         });
 
@@ -151,7 +151,8 @@ const generarFacturacionMensualMasiva = async (req, res) => {
 
 const generarFacturaDinamica = async (req, res) => {
     try {
-        const { usuario, mes, anio, porcentajeIva, aplicaRetencion, montoRetencion, otrosCargos, tipoInmueble, indexUnidad } = req.body;
+        const { usuario, mes, anio, porcentajeIva, aplicaRetencion,
+            montoRetencion, otrosCargos, tipoInmueble, tasaBCV } = req.body;
 
 
         const perfil = await Profile.findOne({ usuario }).populate('residencia oficina local');
@@ -188,9 +189,14 @@ const generarFacturaDinamica = async (req, res) => {
         const numeroSecuencial = contadorDoc.secuencia.toString().padStart(5, '0'); // Ej: 00001
         const nroFacturaFinal = `FAC-${anio}-${numeroSecuencial}`;
 
+        // 1. PRIMERO buscas la tasa
+        const tasaData = await Tasabcv.findOne().sort({ createdAt: -1 });
+        const precioDolar = tasaData ? tasaData.precio_dia : 1;
+
         const factura = new Facturacion({
             usuario,
             nroFactura: nroFacturaFinal,
+            tasaBCV: precioDolar,
             mes, anio, detalles, porcentajeIva,
             aplicaRetencion: Boolean(aplicaRetencion),
             montoRetencion: aplicaRetencion ? (Number(montoRetencion) || 0) : 0,
@@ -209,19 +215,12 @@ const generarFacturaDinamica = async (req, res) => {
         // conviértelo a minúsculas para que coincida con las llaves del objeto perfil
         const keyPerfil = origenFrontend.toLowerCase();
 
-        const unidadesDeEsteTipo = perfil[keyPerfil]; 
+        const unidadesDeEsteTipo = perfil[keyPerfil];
         const unidad = (unidadesDeEsteTipo && unidadesDeEsteTipo.length > 0) ? unidadesDeEsteTipo[0] : null;
 
-        const identificadorInmueble = unidad 
-            ? `${origenFrontend}: ${unidad.edificio} - ${unidad.letra}` 
+        const identificadorInmueble = unidad
+            ? `${origenFrontend}: ${unidad.edificio} - ${unidad.letra}`
             : 'N/A';
-
-
-        // 1. Buscamos la tasa BCV del día para convertir a dólares (si el PDF la necesita)
-        // 2. BUSCAR LA TASA EN LA BASE DE DATOS (No dependas del front)
-        const tasaData = await Tasabcv.findOne().sort({ createdAt: -1 });
-        const precioDolar = tasaData ? tasaData.precio_dia : 1; // Si no hay tasa, usamos 1 para no romper
-
 
         // 3. Enviamos al PDF el objeto enriquecido
 
@@ -234,9 +233,12 @@ const generarFacturaDinamica = async (req, res) => {
         const dataParaPDF = {
             ...facturaGuardada._doc,
             usuarioNombre: nombreCompleto,
-            inmueble: identificadorInmueble, // <-- Esto es lo que leerá el PDF
-            tasaBCV: precioDolar,
-            prefijo: prefijo// <--- Pasamos la tasa al PDF
+            inmueble: identificadorInmueble,
+            tasaBCV: tasaBCV, // Usa la del body para que sea 36.5
+            porcentajeIva: 16, // O el valor que corresponda para evitar el 'undefined'
+            prefijo: prefijo,
+            // Agrega el equivalente en dólares para evitar el '$ NaN'
+            equivalenteDolar: (facturaGuardada.totalPagar / tasaBCV).toFixed(2)
         };
 
         // IMPORTANTE: NO uses res.json() aquí.
@@ -258,7 +260,7 @@ const escribirPDF = (data, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     doc.pipe(res);
 
-    // --- ENCABEZADO (Igual al tuyo) ---
+    // --- ENCABEZADO ---
     doc.fontSize(14).font('Helvetica-Bold').text('CORPOCAPITAL', { align: 'center' });
     doc.fontSize(8).font('Helvetica').text('RIF: G-20010665-4', { align: 'center' });
     doc.text('Complejo Residencial Parque Central', { align: 'center' });
@@ -270,7 +272,7 @@ const escribirPDF = (data, res) => {
     doc.text(`NOMBRE: ${data.usuarioNombre}`, 40, 90);
     doc.text(`INMUEBLE: ${data.inmueble}`, 40, 105);
     doc.text(`FECHA EMISIÓN: ${new Date().toLocaleDateString()}`, 420, 90);
-    doc.text(`FACTURA NRO: ${data.nroFactura}`, 400, 50); // Imprimirá FAC-2024-0001
+    doc.text(`FACTURA NRO: ${data.nroFactura}`, 400, 50);
 
     // --- TABLA DE GASTOS ---
     const tableTop = 150;
@@ -285,62 +287,71 @@ const escribirPDF = (data, res) => {
     doc.font('Helvetica').fontSize(8);
 
     (data.detalles || []).forEach(item => {
-        doc.text(item.descripcion.substring(0, 45), 40, y);
-        doc.text(`---`, 250, y, { width: 100, align: 'center' });
-        doc.text(`---`, 350, y, { width: 100, align: 'center' });
-        doc.font('Helvetica-Bold').text(`Bs. ${item.montoBase.toFixed(2)}`, 480, y, { width: 100, align: 'right' });
+        // Solo dibujamos la línea si el monto es mayor a cero
+        if (Number(item.montoBase) > 0) { 
+            doc.text(item.descripcion.substring(0, 45), 40, y);
+            doc.text(`---`, 250, y, { width: 100, align: 'center' });
+            doc.text(`---`, 350, y, { width: 100, align: 'center' });
+            doc.font('Helvetica-Bold').text(`Bs. ${(Number(item.montoBase) || 0).toFixed(2)}`, 480, y, { width: 100, align: 'right' });
 
-        y += 15;
-        doc.moveTo(30, y).lineTo(580, y).dash(1, { space: 2 }).stroke().undash();
-        y += 5;
+            y += 15;
+            doc.moveTo(30, y).lineTo(580, y).dash(1, { space: 2 }).stroke().undash();
+            y += 5;
+        }
     });
 
-    // --- TOTALES (CORRECCIONES AQUÍ) ---
-    const subtotal = data.detalles.reduce((acc, i) => acc + i.montoBase, 0);
-    const iva = (subtotal * (data.porcentajeIva / 100));
-    const fondoReserva = subtotal * 0.05;
+    // --- CÁLCULOS SIN FONDO DE RESERVA ---
+     const subtotal = (data.detalles || []).reduce((acc, i) => acc + (Number(i.montoBase) || 0), 0);
+    const porcentajeIva = data.porcentajeIva || (data.detalles && data.detalles[0] ? data.detalles[0].ivaPorcentaje : 16);
+    const iva = (subtotal * (porcentajeIva / 100));
+   // Tomamos la retención y los otros cargos directamente del objeto data
+    const montoRetencion = Number(data.montoRetencion) || 0;
+    const otrosCargos = Number(data.otrosCargos) || 0;
 
-    // 1. CORRECCIÓN: Usar data.otrosCargos y data.montoRetencion (nombres correctos del objeto)
-    const totalBs = subtotal + iva + (data.otrosCargos || 0) + fondoReserva - (data.montoRetencion || 0);
+    // TOTAL FINAL: Base + IVA + Otros - Retención
+    const totalBs = subtotal + iva + otrosCargos - montoRetencion;
 
-    // 2. CORRECCIÓN: Validar que tasaBCV no sea 0 para no romper el código
-    const tasa = data.tasaBCV || 1;
+    const tasa = Number(data.tasaBCV) || 1;
     const totalUSD = totalBs / tasa;
 
     const footerY = 550;
 
+    // --- BLOQUE DE TOTALES ---
     doc.fontSize(8).fillColor('gray').text(`TASA BCV DEL DÍA: ${tasa.toFixed(2)} Bs/$`, 40, footerY);
 
     doc.fillColor('black').font('Helvetica-Bold');
     doc.text(`BASE IMPONIBLE:`, 350, footerY);
     doc.text(`Bs. ${subtotal.toFixed(2)}`, 480, footerY, { align: 'right' });
 
-    doc.text(`IVA (${data.porcentajeIva}%):`, 350, footerY + 15);
+    doc.text(`IVA (${porcentajeIva}%):`, 350, footerY + 15);
     doc.text(`Bs. ${iva.toFixed(2)}`, 480, footerY + 15, { align: 'right' });
 
-    doc.text(`FDO. RESERVA (5%):`, 350, footerY + 30);
-    doc.text(`Bs. ${fondoReserva.toFixed(2)}`, 480, footerY + 30, { align: 'right' });
+    // MOSTRAR RETENCIÓN SOLO SI APLICA
+    if (data.aplicaRetencion && montoRetencion > 0) {
+        doc.fillColor('red'); // Opcional: poner en rojo para resaltar la resta
+        doc.text(`RETENCIÓN IVA (-):`, 350, footerY + 30);
+        doc.text(`Bs. ${montoRetencion.toFixed(2)}`, 480, footerY + 30, { align: 'right' });
+        doc.fillColor('black');
+    }
 
-    // 3. RECUADRO DE TOTAL FINAL (Usar totalBs que ya calculamos)
-    doc.rect(340, footerY + 50, 240, 45).fill('#000000'); // Un poco más alto para que quepan ambos
+    // Eliminamos las líneas del Fondo de Reserva aquí
+
+    // RECUADRO DE TOTAL FINAL
+    doc.rect(340, footerY + 50, 240, 45).fill('#000000');
     doc.fillColor('white').fontSize(10);
 
-    doc.text(`TOTAL A PAGAR:`, 350, footerY + 58);
-    doc.text(`Bs. ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}`, 480, footerY + 58, { align: 'right' });
+    doc.text(`TOTAL A PAGAR:`, 350, footerY + 48);
+    doc.text(`Bs. ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 480, footerY + 48, { align: 'right' });
 
-    // 4. LÍNEA DUAL (USD) dentro del cuadro negro
-    doc.fontSize(9).text(`EQUIVALENTE REFERENCIAL:`, 350, footerY + 75);
-    doc.text(`$ ${totalUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}`, 480, footerY + 75, { align: 'right' });
+    doc.fontSize(9).text(`EQUIVALENTE REFERENCIAL:`, 350, footerY + 65);
+    doc.text(`$ ${totalUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 480, footerY + 65, { align: 'right' });
 
     // --- SELLO Y FIRMA ---
     const sealY = 660;
     doc.rect(30, sealY, 180, 80).stroke();
     doc.fillColor('black').fontSize(8).font('Helvetica-Bold').text('SELLO / FIRMA', 35, sealY + 5, { align: 'center', width: 170 });
-
-    doc.font('Helvetica').fontSize(7);
-    doc.text('Recibido por: ___________________', 40, sealY + 30);
+    doc.font('Helvetica').fontSize(7).text('Recibido por: ___________________', 40, sealY + 30);
     doc.text('Fecha: ____ / ____ / ________', 40, sealY + 55);
-
     doc.fontSize(9).text('COPIA CLIENTE', 30, sealY + 95, { align: 'center', width: 550 });
 
     doc.end();
@@ -352,14 +363,14 @@ const listarPaymentPorStatus = async (req, res) => {
     try {
         // First, find the category by name
         const factura = await Facturacion.findOne({ estado: estado });
-        
+
         if (!factura) {
             return res.status(404).json({ message: 'Pago no encontrado' });
         }
-        
+
         // Then, find projects using the category's ObjectId
         const facturas = await Facturacion.find({ estado: estado });
-        
+
         res.status(200).send({ facturas: facturas });
     } catch (err) {
         res.status(500).send({ error: err });
@@ -387,7 +398,7 @@ const listarStatusFacturas = async (req, res) => {
 
 const getFacturasByUser = async (req, res) => {
     const userId = req.params.id;
-    
+
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -414,11 +425,11 @@ const getFacturasByUser = async (req, res) => {
             return { ...f, totalPagar };
         });
 
-        res.json({ 
-            ok: true, 
+        res.json({
+            ok: true,
             facturas: facturasConTotal,
             total,
-            pages: Math.ceil(total / limit) 
+            pages: Math.ceil(total / limit)
         });
 
     } catch (error) {
