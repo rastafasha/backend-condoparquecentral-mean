@@ -45,7 +45,7 @@ router.get('/status/:status',   listarPaymentPorStatus);
 
 router.post('/store', [
     validarJWT,
-    check('amount', 'El monto es obligatorio y debe ser número').isNumeric(),
+    check('amount', 'El monto es obligatorio').not().isEmpty(),
     check('cliente', 'El ID del cliente es necesario').isMongoId(),
     check('referencia', 'La referencia es obligatoria').not().isEmpty(),
     validarCampos

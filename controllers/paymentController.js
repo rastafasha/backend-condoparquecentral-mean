@@ -58,42 +58,34 @@ const getPaymentsByUser = async (req, res) => {
 };
 const createPayment = async (req, res) => {
     try {
-        // Desestructuramos lo que viene de Angular
+        // 1. Extraemos los campos (asegúrate que los nombres coincidan con el FormData)
         const {
             amount,
-            cliente,
-            tipo_pago,
-            referencia,
-            vendedorId,
-            adminId,
-            ceoId,
+            cliente, // Este es el ID del usuario
             metodo_pago,
             bank_destino,
-            fecha_verificacion,
-            facturaId,
+            referencia,
             tasaBCV,
+            factura // Angular debe enviar 'factura', no 'facturaId'
         } = req.body;
 
-        // Validación de seguridad: que los IDs no vengan vacíos
-        if (!vendedorId || !adminId || !ceoId) {
-            return res.status(400).json({
-                ok: false,
-                msg: 'Faltan los IDs de los asociados para la repartición'
-            });
+        // 2. Manejo de la imagen (si usas Multer)
+        let img = '';
+        if (req.file) {
+            img = req.file.filename; // o req.file.path según tu config
         }
 
-        const cuota = Number(amount) / 3;
-
+        // 3. Creamos el nuevo pago
         const payment = new Payment({
-            cliente,
             amount: Number(amount),
-            tipo_pago,
-            referencia,
+            cliente,
             metodo_pago,
             bank_destino,
-            fecha_verificacion,
-            tasaBCV,
-            factura: facturaId,
+            referencia,
+            tasaBCV: Number(tasaBCV),
+            factura, // Relación con la factura
+            img,
+            status: 'PENDIENTE'
         });
 
         const paymentDB = await payment.save();
@@ -104,10 +96,10 @@ const createPayment = async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error); // Revisa la consola de Node para ver el error exacto
+        console.error('Error en createPayment:', error);
         res.status(500).json({
             ok: false,
-            msg: 'Error interno en el servidor, revise los logs'
+            msg: 'Error al procesar el pago'
         });
     }
 };
