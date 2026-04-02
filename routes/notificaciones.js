@@ -27,10 +27,11 @@ router.post('/save-subscription', validarJWT, async (req, res) => {
         console.log('✅ Suscripción vinculada al usuario:', uid);
 
         // Mensaje de bienvenida inmediato
-        await sendNotification(
+       await sendNotification(
             subscription, 
-            '¡Notificaciones Activas!', 
-            'Recibirás los avisos del condominio en este dispositivo.'
+            '¡Bienvenido!', 
+            'Ahora recibirás los avisos aquí.',
+            '/home' // <--- Cuarto parámetro: la URL
         );
         
         res.status(201).json({ ok: true, msg: 'Suscripción guardada' });
