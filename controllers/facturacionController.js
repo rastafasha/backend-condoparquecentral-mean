@@ -168,17 +168,19 @@ const generarFacturacionMensualMasiva = async (req, res) => {
                 await miNotificacion.save();
 
                 // 2. Disparamos el PUSH usando el HELPER (Dentro de generarFacturacionMensualMasiva)
+                // --- ENVÍO DE NOTIFICACIÓN PUSH (Colección Independiente) ---
                 PushSubscription.find({ usuario: perfil.usuario._id }).then(subs => {
                     subs.forEach(s => {
-                        // Usamos 's.subscription' porque así lo definiste en tu modelo pushSchema
+                        // Usamos s.subscription porque así está en tu modelo
                         sendNotification(
                             s.subscription, 
                             miNotificacion.titulo, 
                             miNotificacion.mensaje
                         ).catch(err => {
-                            // Si la suscripción falló por ser vieja (410/404), la borramos de la DB
+                            // Si el token expiró (410), lo borramos automáticamente
                             if (err.statusCode === 410 || err.statusCode === 404) {
                                 s.deleteOne();
+                                console.log(`🗑️ Suscripción eliminada por expiración: ${perfil.usuario._id}`);
                             }
                         });
                     });
@@ -281,18 +283,23 @@ const generarFacturaDinamica = async (req, res) => {
         // ==========================================================
         // 2. DISPARAR PUSH (Sin 'await' para no retrasar el PDF)
         // ==========================================================
-        PushSubscription.find({ usuario: usuario }).then(subs => {
-            subs.forEach(s => {
-                // IMPORTANTE: s.subscription como definimos en tu modelo
-                sendNotification(
-                    s.subscription,
-                    miNotificacion.titulo,
-                    miNotificacion.mensaje
-                ).catch(err => {
-                    if (err.statusCode === 410 || err.statusCode === 404) s.deleteOne();
-                });
-            });
+        // --- ENVÍO DE NOTIFICACIÓN PUSH (Colección Independiente) ---
+PushSubscription.find({ usuario: perfil.usuario._id }).then(subs => {
+    subs.forEach(s => {
+        // Usamos s.subscription porque así está en tu modelo
+        sendNotification(
+            s.subscription, 
+            miNotificacion.titulo, 
+            miNotificacion.mensaje
+        ).catch(err => {
+            // Si el token expiró (410), lo borramos automáticamente
+            if (err.statusCode === 410 || err.statusCode === 404) {
+                s.deleteOne();
+                console.log(`🗑️ Suscripción eliminada por expiración: ${perfil.usuario._id}`);
+            }
         });
+    });
+});
         // 1. Unimos el nombre del perfil
         const nombreCompleto = `${perfil.first_name} ${perfil.last_name}`;
         // 2. Extraemos el identificador del inmueble (Edificio + Letra/Número)

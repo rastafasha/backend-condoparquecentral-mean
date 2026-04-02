@@ -12,7 +12,7 @@ const webpush = require('web-push');
   );
 
 
-
+// Agregamos 'url' como cuarto parámetro (opcional, por defecto '/home')
 const sendNotification = async (userSubscription, title, message) => {
   const payload = JSON.stringify({
     notification: {
@@ -20,7 +20,7 @@ const sendNotification = async (userSubscription, title, message) => {
       body: message,
       icon: 'https://propietarios-corpocapital-pc.vercel.app/assets/icons/icon-128x128.png', // URL ABSOLUTA obligatoria
       vibrate: [100, 50, 100],
-      data: { url: '/home' }
+      data: { url }
     }
   });
 
