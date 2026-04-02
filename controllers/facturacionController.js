@@ -4,6 +4,7 @@ const Tasabcv = require('../models/tasabcv');
 const Contador = require('../models/contador');
 const Notificacion = require('../models/notificacion');
 const PushSubscription = require('../models/push-subscription'); // Ajusta la ruta a tu modelo
+const { sendNotification } = require('../helpers/notificaciones');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const webpush = require('web-push');
@@ -156,7 +157,7 @@ const generarFacturacionMensualMasiva = async (req, res) => {
 
                 await nuevaFactura.save();
 
-                // A. Guardamos en el HISTORIAL (Tu modelo actual)
+                // 1. Guardamos en el HISTORIAL (App Interna)
                 const miNotificacion = new Notificacion({
                     usuario: perfil.usuario._id,
                     titulo: 'Nueva Factura Disponible',
@@ -165,40 +166,28 @@ const generarFacturacionMensualMasiva = async (req, res) => {
                     referenciaId: nuevaFactura._id
                 });
                 await miNotificacion.save();
-                
-                // Lanzamos los push "en segundo plano" para no frenar la creación de la siguiente factura
+
+                // 2. Disparamos el PUSH usando el HELPER (Dentro de generarFacturacionMensualMasiva)
                 PushSubscription.find({ usuario: perfil.usuario._id }).then(subs => {
                     subs.forEach(s => {
-                        webpush.sendNotification(s.subscription, JSON.stringify({
-                            notification: {
-                                title: miNotificacion.titulo,
-                                body: miNotificacion.mensaje,
-                                data: { url: '/mis-facturas' }
-                            }
-                        })).catch(err => {
+                        // Usamos 's.subscription' porque así lo definiste en tu modelo pushSchema
+                        sendNotification(
+                            s.subscription, 
+                            miNotificacion.titulo, 
+                            miNotificacion.mensaje
+                        ).catch(err => {
+                            // Si la suscripción falló por ser vieja (410/404), la borramos de la DB
                             if (err.statusCode === 410 || err.statusCode === 404) {
-                                // Limpieza automática de tokens viejos
                                 s.deleteOne();
                             }
                         });
                     });
                 });
-                // B. Disparamos el PUSH (Para que le vibre el celular/salte el aviso)
-                const subs = await PushSubscription.find({ usuario: perfil.usuario._id });
-                subs.forEach(s => {
-                    webpush.sendNotification(s.subscription, JSON.stringify({
-                        notification: {
-                            title: miNotificacion.titulo,
-                            body: miNotificacion.mensaje,
-                            data: { url: '/mis-facturas' }
-                        }
-                    })).catch(err => console.log('Suscripción expirada, ignorando...'));
-                });
+
                 facturasCreadas++;
                 console.log(`📝 GENERADA: ${nroFacturaFinal} para ${perfil.first_name} ${perfil.last_name}`);
-            } else {
-                console.log(`⚪ SIN CARGOS: ${perfil.first_name} ${perfil.last_name} no tiene propiedades registradas.`);
             }
+
         }
 
         console.log(`--- FIN DEL PROCESO: ${facturasCreadas} facturas creadas ---`);
@@ -277,6 +266,33 @@ const generarFacturaDinamica = async (req, res) => {
 
 
         const facturaGuardada = await factura.save();
+
+        // ==========================================================
+        // 1. GUARDAR EN HISTORIAL (App Interna)
+        // ==========================================================
+        const miNotificacion = new Notificacion({
+            usuario: usuario, // El ID que viene en el req.body
+            titulo: 'Nueva Factura Generada',
+            mensaje: `Se ha generado tu factura ${nroFacturaFinal} de ${mes}/${anio}.`,
+            tipo: 'NUEVA_FACTURA',
+            referenciaId: facturaGuardada._id
+        });
+        await miNotificacion.save();
+        // ==========================================================
+        // 2. DISPARAR PUSH (Sin 'await' para no retrasar el PDF)
+        // ==========================================================
+        PushSubscription.find({ usuario: usuario }).then(subs => {
+            subs.forEach(s => {
+                // IMPORTANTE: s.subscription como definimos en tu modelo
+                sendNotification(
+                    s.subscription,
+                    miNotificacion.titulo,
+                    miNotificacion.mensaje
+                ).catch(err => {
+                    if (err.statusCode === 410 || err.statusCode === 404) s.deleteOne();
+                });
+            });
+        });
         // 1. Unimos el nombre del perfil
         const nombreCompleto = `${perfil.first_name} ${perfil.last_name}`;
         // 2. Extraemos el identificador del inmueble (Edificio + Letra/Número)
