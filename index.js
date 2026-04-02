@@ -29,8 +29,9 @@ const server = require('http').Server(app);
 
 // Initialize socket.io with the server
 const allowedOrigins = [
-  "http://localhost:4200", // local
+  "http://localhost:4200", // local admin directo
   "http://localhost:4207", // local propietarios
+  "http://localhost:4203", // local admin
   "http://127.0.0.1:8080", // local pwa
   "https://admin-condo-pc.vercel.app", // remoto 
   "https://propietarios-corpocapital-pc.vercel.app", // remoto propietarios

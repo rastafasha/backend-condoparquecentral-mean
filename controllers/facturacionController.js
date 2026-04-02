@@ -2,8 +2,13 @@ const Facturacion = require('../models/facturacion');
 const Profile = require('../models/profile');
 const Tasabcv = require('../models/tasabcv');
 const Contador = require('../models/contador');
+const Notificacion = require('../models/notificacion');
+const PushSubscription = require('../models/push-subscription'); // Ajusta la ruta a tu modelo
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
+const webpush = require('web-push');
+
+
 const getFacturaciones = async (req, res) => {
 
     const facturas = await Facturacion.find()
@@ -46,31 +51,52 @@ const getFactura = async (req, res) => {
 
 
 };
+
 const generarFacturacionMensualMasiva = async (req, res) => {
+    console.log('--- INICIANDO FACTURACIÓN MASIVA ---');
     try {
-        // Recibimos los datos desde el modal de Angular
         const { mes, anio, porcentajeIva, tasaBCV } = req.body;
         const precioDolar = tasaBCV || 1;
 
-        const perfiles = await Profile.find().populate('usuario residencia oficina local');
+        // 1. Buscamos todos los perfiles y populamos sus datos
+        const perfiles = await Profile.find()
+            .populate('usuario residencia oficina local');
+
         let facturasCreadas = 0;
+        let perfilesSaltados = 0;
 
         for (let perfil of perfiles) {
-            // 1. Evitar duplicados por mes/año para cada usuario
+
+            // --- VALIDACIÓN 1: EXISTENCIA DE USUARIO ---
+            if (!perfil.usuario) {
+                console.warn(`⚠️ SALTADO: Perfil [${perfil._id}] no tiene objeto 'usuario' (está huérfano).`);
+                perfilesSaltados++;
+                continue;
+            }
+
+            // --- VALIDACIÓN 2: ROL CORRECTO ---
+            if (perfil.usuario.role !== 'USER_ROLE') {
+                console.log(`ℹ️ INFO: Perfil [${perfil.first_name}] saltado por rol [${perfil.usuario.role}].`);
+                continue;
+            }
+
+            // --- VALIDACIÓN 3: FACTURA DUPLICADA ---
             const facturaExistente = await Facturacion.findOne({
                 usuario: perfil.usuario._id,
                 mes,
                 anio
             });
 
-            if (facturaExistente) continue;
+            if (facturaExistente) {
+                console.log(`✅ YA AL DÍA: ${perfil.first_name} ${perfil.last_name} ya tiene factura para ${mes}/${anio}.`);
+                continue;
+            }
 
             const detalles = [];
 
-            // --- LÓGICA DE PROPIEDADES ---
-
-            // A. Residencias: Siempre EXENTAS (IVA 0)
-            perfil.residencia.forEach(r => {
+            // --- PROCESAMIENTO DE PROPIEDADES ---
+            // Residencias
+            perfil.residencia?.forEach(r => {
                 detalles.push({
                     origen: 'RESIDENCIA',
                     propiedadId: r._id,
@@ -81,35 +107,33 @@ const generarFacturacionMensualMasiva = async (req, res) => {
                 });
             });
 
-            // B. Oficinas: Gravadas (Toma el IVA del modal o de la oficina si existe)
-            perfil.oficina.forEach(o => {
+            // Oficinas
+            perfil.oficina?.forEach(o => {
                 const alicuota = o.ivaEspecial || porcentajeIva || 16;
-                const impuesto = o.montoMensual * (alicuota / 100);
                 detalles.push({
                     origen: 'OFICINA',
                     propiedadId: o._id,
                     montoBase: o.montoMensual,
                     ivaPorcentaje: alicuota,
-                    montoIva: impuesto,
+                    montoIva: o.montoMensual * (alicuota / 100),
                     descripcion: `Oficina: ${o.edificio} - ${o.letra}`
                 });
             });
 
-            // C. Locales: Gravados (Toma el IVA del modal o del local si existe)
-            perfil.local.forEach(l => {
+            // Locales
+            perfil.local?.forEach(l => {
                 const alicuota = l.ivaEspecial || porcentajeIva || 16;
-                const impuesto = l.montoMensual * (alicuota / 100);
                 detalles.push({
                     origen: 'LOCAL',
                     propiedadId: l._id,
                     montoBase: l.montoMensual,
                     ivaPorcentaje: alicuota,
-                    montoIva: impuesto,
+                    montoIva: l.montoMensual * (alicuota / 100),
                     descripcion: `Local: ${l.edificio} - ${l.letra}`
                 });
             });
 
-            // 2. Si el perfil tiene algo que cobrar, guardamos la factura
+            // --- GUARDADO DE FACTURA ---
             if (detalles.length > 0) {
                 const contadorDoc = await Contador.findOneAndUpdate(
                     { id: `factura_${anio}` },
@@ -126,27 +150,74 @@ const generarFacturacionMensualMasiva = async (req, res) => {
                     anio,
                     detalles,
                     tasaBCV: precioDolar,
-                    aplicaRetencion: perfil.esAgenteRetencion || false, // Heredado del perfil
+                    aplicaRetencion: perfil.esAgenteRetencion || false,
                     estado: 'PENDIENTE'
                 });
 
                 await nuevaFactura.save();
+
+                // A. Guardamos en el HISTORIAL (Tu modelo actual)
+                const miNotificacion = new Notificacion({
+                    usuario: perfil.usuario._id,
+                    titulo: 'Nueva Factura Disponible',
+                    mensaje: `Ya puedes consultar tu factura ${nroFacturaFinal} de ${mes}/${anio}.`,
+                    tipo: 'NUEVA_FACTURA',
+                    referenciaId: nuevaFactura._id
+                });
+                await miNotificacion.save();
+                
+                // Lanzamos los push "en segundo plano" para no frenar la creación de la siguiente factura
+                PushSubscription.find({ usuario: perfil.usuario._id }).then(subs => {
+                    subs.forEach(s => {
+                        webpush.sendNotification(s.subscription, JSON.stringify({
+                            notification: {
+                                title: miNotificacion.titulo,
+                                body: miNotificacion.mensaje,
+                                data: { url: '/mis-facturas' }
+                            }
+                        })).catch(err => {
+                            if (err.statusCode === 410 || err.statusCode === 404) {
+                                // Limpieza automática de tokens viejos
+                                s.deleteOne();
+                            }
+                        });
+                    });
+                });
+                // B. Disparamos el PUSH (Para que le vibre el celular/salte el aviso)
+                const subs = await PushSubscription.find({ usuario: perfil.usuario._id });
+                subs.forEach(s => {
+                    webpush.sendNotification(s.subscription, JSON.stringify({
+                        notification: {
+                            title: miNotificacion.titulo,
+                            body: miNotificacion.mensaje,
+                            data: { url: '/mis-facturas' }
+                        }
+                    })).catch(err => console.log('Suscripción expirada, ignorando...'));
+                });
                 facturasCreadas++;
+                console.log(`📝 GENERADA: ${nroFacturaFinal} para ${perfil.first_name} ${perfil.last_name}`);
+            } else {
+                console.log(`⚪ SIN CARGOS: ${perfil.first_name} ${perfil.last_name} no tiene propiedades registradas.`);
             }
         }
 
+        console.log(`--- FIN DEL PROCESO: ${facturasCreadas} facturas creadas ---`);
+
         res.json({
             ok: true,
-            msg: facturasCreadas > 0
-                ? `Proceso completado. Se generaron ${facturasCreadas} facturas.`
-                : "No se generaron facturas nuevas (ya estaban al día)."
+            msg: `Proceso completado.`,
+            detalles: {
+                generadas: facturasCreadas,
+                perfilesSinUsuario: perfilesSaltados
+            }
         });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ ok: false, msg: 'Error en el proceso masivo' });
+        console.error("❌ ERROR CRÍTICO EN FACTURACIÓN MASIVA:", error);
+        res.status(500).json({ ok: false, msg: 'Error interno, revisa los logs del servidor' });
     }
 };
+
 
 
 const generarFacturaDinamica = async (req, res) => {
@@ -288,7 +359,7 @@ const escribirPDF = (data, res) => {
 
     (data.detalles || []).forEach(item => {
         // Solo dibujamos la línea si el monto es mayor a cero
-        if (Number(item.montoBase) > 0) { 
+        if (Number(item.montoBase) > 0) {
             doc.text(item.descripcion.substring(0, 45), 40, y);
             doc.text(`---`, 250, y, { width: 100, align: 'center' });
             doc.text(`---`, 350, y, { width: 100, align: 'center' });
@@ -301,10 +372,10 @@ const escribirPDF = (data, res) => {
     });
 
     // --- CÁLCULOS SIN FONDO DE RESERVA ---
-     const subtotal = (data.detalles || []).reduce((acc, i) => acc + (Number(i.montoBase) || 0), 0);
+    const subtotal = (data.detalles || []).reduce((acc, i) => acc + (Number(i.montoBase) || 0), 0);
     const porcentajeIva = data.porcentajeIva || (data.detalles && data.detalles[0] ? data.detalles[0].ivaPorcentaje : 16);
     const iva = (subtotal * (porcentajeIva / 100));
-   // Tomamos la retención y los otros cargos directamente del objeto data
+    // Tomamos la retención y los otros cargos directamente del objeto data
     const montoRetencion = Number(data.montoRetencion) || 0;
     const otrosCargos = Number(data.otrosCargos) || 0;
 
