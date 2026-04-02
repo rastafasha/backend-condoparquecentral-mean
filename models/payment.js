@@ -36,7 +36,7 @@ const paymentSchema = Schema({
         enum: ['PENDIENTE', 'APROBADO', 'RECHAZADO'], 
         default: 'PENDIENTE' 
     },
-    motivoRechazo: { type: String } ,// <--- NUEVO CAMPO
+    observaciones: { type: String } ,// <--- NUEVO CAMPO
     fecha_pago: { type: Date, default: Date.now },
     usuario_validador: { type: Schema.Types.ObjectId, ref: 'Usuario' } // Admin que aprobó
 }, { 
