@@ -92,4 +92,39 @@ router.post('/enviar-a-todos', validarJWT, async (req, res) => {
     }
 });
 
+router.get('/unread-count', validarJWT, async (req, res) => {
+    try {
+        const count = await Notificacion.countDocuments({ 
+            usuario: req.uid, 
+            leido: false 
+        });
+        res.json({ ok: true, count });
+    } catch (error) {
+        res.status(500).json({ ok: false });
+    }
+});
+
+router.put('/marcar-leidas', validarJWT, async (req, res) => {
+    try {
+        const uid = req.uid;
+        // Marcamos todas las notificaciones de este usuario como leídas
+        await Notificacion.updateMany(
+            { usuario: req.uid, leido: false, tipo: 'NUEVA_FACTURA' }, 
+            { leido: true }
+        );
+        res.json({ ok: true, msg: 'Notificaciones marcadas como leídas' });
+    } catch (error) {
+        res.status(500).json({ ok: false, msg: 'Error al actualizar' });
+    }
+});
+
+router.get('/notificaciones-pendientes', validarJWT, async (req, res) => {
+    const notificaciones = await Notificacion.find({ 
+        usuario: req.uid, 
+        leido: false 
+    }).sort({ createdAt: -1 }); // Las más nuevas primero
+
+    res.json({ ok: true, notificaciones });
+});
+
 module.exports = router;

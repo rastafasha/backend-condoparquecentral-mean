@@ -2,6 +2,7 @@ const { response } = require('express');
 const Payment = require('../models/payment');
 const Facturacion = require('../models/facturacion');
 const Notificacion = require('../models/notificacion');
+const PushSubscription = require('../models/push-subscription');
 
 const getPayments = async (req, res) => {
     try {
@@ -174,26 +175,64 @@ const updatePayment = async (req, res) => {
 
 const updateStatus = async (req, res) => {
     const id = req.params.id;
+    const { nuevoEstado, observaciones } = req.body; // PENDIENTE, APROBADO, RECHAZADO
+
     try {
-        // 1. Actualizamos el pago
+        // 1. Actualizamos el pago (usamos el string del enum directamente)
         const paymentDB = await Payment.findByIdAndUpdate(
             id,
-            { status: true },
+            { status: nuevoEstado, observacionesAdmin: observaciones },
             { new: true }
-        );
+        ).populate('usuario factura');
 
         if (!paymentDB) return res.status(404).json({ ok: false, msg: 'Pago no encontrado' });
 
-        // 2. Si el pago tiene una factura asociada, la marcamos como PAGADA
-        if (paymentDB.factura) {
-            await Facturacion.findByIdAndUpdate(paymentDB.factura, { estado: 'PAGADO' });
+        // 2. Si es APROBADO, marcamos la factura como PAGADA
+        if (nuevoEstado === 'APROBADO' && paymentDB.factura) {
+            await Facturacion.findByIdAndUpdate(paymentDB.factura._id, { estado: 'PAGADO' });
+        }
+
+        // ==========================================================
+        // 3. GESTIÓN DINÁMICA DE NOTIFICACIONES
+        // ==========================================================
+        const nroFactura = paymentDB.factura?.nroFactura || 'su recibo';
+        
+        // Configuramos título y mensaje según el estado
+        const esAprobado = nuevoEstado === 'APROBADO';
+        const titulo = esAprobado ? '✅ Pago Aprobado' : '❌ Pago Rechazado';
+        const tipoNotif = esAprobado ? 'PAGO_APROBADO' : 'PAGO_RECHAZADO';
+        const mensaje = esAprobado 
+            ? `Tu pago de la factura ${nroFactura} ha sido validado.`
+            : `Tu pago de la factura ${nroFactura} fue rechazado. Motivo: ${observaciones || 'Datos incorrectos'}`;
+
+        // A. Guardar en Historial (Para el iPhone 6s / Polling)
+        const miNotificacion = new Notificacion({
+            usuario: paymentDB.usuario._id,
+            titulo,
+            mensaje,
+            tipo: tipoNotif,
+            referenciaId: paymentDB._id
+        });
+        await miNotificacion.save();
+
+        // B. Disparar PUSH (Si es PENDIENTE no enviamos push, solo en cambios finales)
+        if (nuevoEstado !== 'PENDIENTE') {
+            PushSubscription.find({ usuario: paymentDB.usuario._id }).then(subs => {
+                subs.forEach(s => {
+                    sendNotification(s.subscription, titulo, mensaje, '/mis-pagos')
+                        .catch(err => { if (err.statusCode === 410) s.deleteOne(); });
+                });
+            });
         }
 
         res.status(200).json({ ok: true, payment: paymentDB });
+
     } catch (err) {
-        res.status(500).json({ ok: false, msg: 'Error al procesar el pago' });
+        console.error(err);
+        res.status(500).json({ ok: false, msg: 'Error al actualizar estado' });
     }
 };
+
 
 const getMonthlyReport = async (req, res) => {
     try {
