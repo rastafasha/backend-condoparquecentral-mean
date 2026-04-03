@@ -11,7 +11,6 @@ const {
     updatePayment,
     deletePayment,
     getPaymentsByUser,
-    updateStatus,
     getMonthlyReport,
     validarPagoAdministrativo,
     enviarFactura,
@@ -58,7 +57,6 @@ router.post('/validarpago/:id', [
 ], validarPagoAdministrativo);
 
 router.put('/update/:id',  validarJWT, updatePayment);
-router.put('/updatestatus/:id',  validarJWT, updateStatus);
 router.delete('/delete/:id',  validarJWT, deletePayment);
 
 router.post('/enviar_factura', upload.single('facturacliente'), enviarFactura);

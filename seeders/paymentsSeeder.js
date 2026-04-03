@@ -148,20 +148,20 @@ const seedPayments = async () => {
             // Seleccionamos una factura al azar del array que ahora sí tiene datos
         const facturaAleatoria = facturas[i % facturas.length];
 
-            paymentsData.push({
-                amount: Math.floor(Math.random() * 500) + 100,
-                metodo_pago: metodo,
-                bank_destino: bancos[i % bancos.length],
-                // REFERENCIA ÚNICA: Importante para el track de Angular
-                referencia: `${metodo.substring(0, 2)}-${user.username.toUpperCase()}-${1000 + i}`,
-                status: status,
-                tasaBCV: 36.5,
-                cliente: user._id,
-                factura: facturaAleatoria._id, // ID aleatorio para pruebas
-                fecha_pago: new Date(Date.now() - (i * 3600000 * 24)), // Fechas distintas (un día menos cada uno)
-                img: `https://picsum.photos/200/300?random=${i}`,
-            });
-        }
+           paymentsData.push({
+            amount: Math.floor(Math.random() * 500) + 100,
+            metodo_pago: metodo,
+            bank_destino: bancos[i % bancos.length],
+            referencia: `${metodo.substring(0, 2)}-${user.username.toUpperCase()}-${1000 + i}`,
+            status: status,
+            tasaBCV: 36.5,
+            cliente: user._id,
+            factura: facturaAleatoria._id,
+            fecha_pago: new Date(Date.now() - (i * 3600000 * 24)),
+            img: `https://picsum.photos/200/300?random=${i}`,
+            observaciones: "" // <--- AÑADE ESTO AQUÍ
+        });
+                }
 
         await Payment.insertMany(paymentsData);
         console.log('✅ 60 Payments insertados con referencias únicas');

@@ -13,6 +13,8 @@
         "seed:payments": "node seeders/paymentsSeeder.js",
         "seed:profile": "node seeders/profileSeeder.js",
         "seed:transferencias": "node seeders/transferenciasSeeder.js",
+        "seed:comunicados": "node seeders/comunicadosTest.js",
+        "seed:comunicadosData": "node seeders/comunicadosData.js",
         "start": "node index.js"
     },
     "keywords": [],

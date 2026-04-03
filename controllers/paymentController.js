@@ -24,7 +24,7 @@ const getPayments = async (req, res) => {
 
 const getPaymentsByUser = async (req, res) => {
     const userId = req.params.id;
-    
+
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -45,11 +45,11 @@ const getPaymentsByUser = async (req, res) => {
             Payment.countDocuments(query)
         ]);
 
-        res.json({ 
-            ok: true, 
+        res.json({
+            ok: true,
             payments,
             total,
-            pages: Math.ceil(total / limit) 
+            pages: Math.ceil(total / limit)
         });
 
     } catch (error) {
@@ -115,9 +115,9 @@ const getPayment = async (req, res) => {
             .populate('usuario_validador', 'username'); // Traemos quién aprobó
 
         if (!payment) {
-            return res.status(404).json({ 
-                ok: false, 
-                msg: 'El pago no existe en la base de datos' 
+            return res.status(404).json({
+                ok: false,
+                msg: 'El pago no existe en la base de datos'
             });
         }
 
@@ -129,9 +129,9 @@ const getPayment = async (req, res) => {
     } catch (error) {
         console.log(error);
         // Si el ID no tiene el formato correcto de MongoDB, cae aquí
-        return res.status(500).json({ 
-            ok: false, 
-            msg: 'Error al buscar el pago, verifique el ID' 
+        return res.status(500).json({
+            ok: false,
+            msg: 'Error al buscar el pago, verifique el ID'
         });
     }
 };
@@ -173,66 +173,6 @@ const updatePayment = async (req, res) => {
     }
 };
 
-const updateStatus = async (req, res) => {
-    const id = req.params.id;
-    const { nuevoEstado, observaciones } = req.body; // PENDIENTE, APROBADO, RECHAZADO
-
-    try {
-        // 1. Actualizamos el pago (usamos el string del enum directamente)
-        const paymentDB = await Payment.findByIdAndUpdate(
-            id,
-            { status: nuevoEstado, observacionesAdmin: observaciones },
-            { new: true }
-        ).populate('usuario factura');
-
-        if (!paymentDB) return res.status(404).json({ ok: false, msg: 'Pago no encontrado' });
-
-        // 2. Si es APROBADO, marcamos la factura como PAGADA
-        if (nuevoEstado === 'APROBADO' && paymentDB.factura) {
-            await Facturacion.findByIdAndUpdate(paymentDB.factura._id, { estado: 'PAGADO' });
-        }
-
-        // ==========================================================
-        // 3. GESTIÓN DINÁMICA DE NOTIFICACIONES
-        // ==========================================================
-        const nroFactura = paymentDB.factura?.nroFactura || 'su recibo';
-        
-        // Configuramos título y mensaje según el estado
-        const esAprobado = nuevoEstado === 'APROBADO';
-        const titulo = esAprobado ? '✅ Pago Aprobado' : '❌ Pago Rechazado';
-        const tipoNotif = esAprobado ? 'PAGO_APROBADO' : 'PAGO_RECHAZADO';
-        const mensaje = esAprobado 
-            ? `Tu pago de la factura ${nroFactura} ha sido validado.`
-            : `Tu pago de la factura ${nroFactura} fue rechazado. Motivo: ${observaciones || 'Datos incorrectos'}`;
-
-        // A. Guardar en Historial (Para el iPhone 6s / Polling)
-        const miNotificacion = new Notificacion({
-            usuario: paymentDB.usuario._id,
-            titulo,
-            mensaje,
-            tipo: tipoNotif,
-            referenciaId: paymentDB._id
-        });
-        await miNotificacion.save();
-
-        // B. Disparar PUSH (Si es PENDIENTE no enviamos push, solo en cambios finales)
-        if (nuevoEstado !== 'PENDIENTE') {
-            PushSubscription.find({ usuario: paymentDB.usuario._id }).then(subs => {
-                subs.forEach(s => {
-                    sendNotification(s.subscription, titulo, mensaje, '/mis-pagos')
-                        .catch(err => { if (err.statusCode === 410) s.deleteOne(); });
-                });
-            });
-        }
-
-        res.status(200).json({ ok: true, payment: paymentDB });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ ok: false, msg: 'Error al actualizar estado' });
-    }
-};
-
 
 const getMonthlyReport = async (req, res) => {
     try {
@@ -260,8 +200,8 @@ const getMonthlyReport = async (req, res) => {
                     totalIVA: { $sum: { $sum: "$detalles.montoIva" } },
                     totalOtros: { $sum: "$otrosCargos" },
                     // Cálculo manual del total ya que el virtual no funciona en aggregate
-                    recaudacionNeta: { 
-                        $sum: { 
+                    recaudacionNeta: {
+                        $sum: {
                             $subtract: [
                                 { $add: [{ $sum: "$detalles.montoBase" }, { $sum: "$detalles.montoIva" }, "$otrosCargos"] },
                                 "$montoRetencion"
@@ -274,14 +214,14 @@ const getMonthlyReport = async (req, res) => {
 
         const morosidad = await Facturacion.aggregate([
             { $match: { mes: month, anio: year, estado: 'PENDIENTE' } },
-            { 
-                $group: { 
-                    _id: null, 
-                    montoPendiente: { 
-                        $sum: { $add: [{ $sum: "$detalles.montoBase" }, { $sum: "$detalles.montoIva" }, "$otrosCargos"] } 
+            {
+                $group: {
+                    _id: null,
+                    montoPendiente: {
+                        $sum: { $add: [{ $sum: "$detalles.montoBase" }, { $sum: "$detalles.montoIva" }, "$otrosCargos"] }
                     },
-                    cantidad: { $sum: 1 } 
-                } 
+                    cantidad: { $sum: 1 }
+                }
             }
         ]);
 
@@ -297,60 +237,68 @@ const getMonthlyReport = async (req, res) => {
 };
 
 const validarPagoAdministrativo = async (req, res) => {
-    const { id } = req.params; // ID del Pago
-    const { nuevoEstado, motivoRechazo } = req.body; // 'APROBADO' o 'RECHAZADO'
-    const adminId = req.uid; // ID del admin que valida (desde el middleware JWT)
+    const { id } = req.params;
+    // 1. IMPORTANTE: Extraemos 'observaciones' que es lo que envías desde el front
+    const { nuevoEstado, observaciones } = req.body;
+    const adminId = req.uid;
 
     try {
-        // 1. Buscamos el pago y su factura asociada
         const pago = await Payment.findById(id).populate('factura');
         if (!pago) return res.status(404).json({ ok: false, msg: 'Pago no encontrado' });
 
-        let tituloNotif = '';
-        let mensajeNotif = '';
+        // 2. Actualizamos campos comunes
+        pago.status = nuevoEstado;
+        pago.usuario_validador = adminId;
+        // Guardamos el texto que viene del front en el campo del modelo
+        pago.observaciones = observaciones || '';
 
         if (nuevoEstado === 'APROBADO') {
-            // 2. Actualizamos el Pago
-           pago.status = 'APROBADO';
-            pago.usuario_validador = adminId;
+            pago.status = 'APROBADO';
             pago.fecha_pago = Date.now();
-            await pago.save();
 
             if (pago.factura) {
+                // 1. APROBAR: Factura pasa a PAGADO
                 await Facturacion.findByIdAndUpdate(pago.factura._id, { estado: 'PAGADO' });
             }
-
-            tituloNotif = '✅ Pago Aprobado';
-            mensajeNotif = `Tu pago de ${pago.amount} ha sido verificado.`;
-            
-        } else {
+        } else if (nuevoEstado === 'RECHAZADO') {
             pago.status = 'RECHAZADO';
-            pago.usuario_validador = adminId;
-            await pago.save();
 
-            tituloNotif = '❌ Pago Rechazado';
-            mensajeNotif = `Motivo: ${motivoRechazo || 'Referencia no encontrada'}.`;
+            if (pago.factura) {
+                // 2. RECHAZAR (Arrepentimiento): Factura vuelve a PENDIENTE
+                await Facturacion.findByIdAndUpdate(pago.factura._id, { estado: 'PENDIENTE' });
+            }
         }
-        // 1. Guardar Notificación en BD
+
+        await pago.save();
+
+        // 3. Configurar Notificación Dinámica
+        const esAprobado = nuevoEstado === 'APROBADO';
+        const tituloNotif = esAprobado ? '✅ Pago Aprobado' : '❌ Pago Rechazado';
+
+        // Si es rechazado, usamos las observaciones enviadas
+        const mensajeNotif = esAprobado
+            ? `Tu pago de ${pago.amount} ha sido verificado.`
+            : `Motivo: ${observaciones || 'Datos incorrectos'}`;
+
         const notif = new Notificacion({
             usuario: pago.cliente,
             titulo: tituloNotif,
             mensaje: mensajeNotif,
-            tipo: nuevoEstado === 'APROBADO' ? 'PAGO_APROBADO' : 'PAGO_RECHAZADO',
+            tipo: esAprobado ? 'PAGO_APROBADO' : 'PAGO_RECHAZADO',
             referenciaId: pago._id
         });
 
         await notif.save();
 
-        // 2. Emitir por Socket (IMPORTANTE: usar pago.cliente)
+        // 4. Emitir por Socket
         if (req.io) {
             req.io.to(pago.cliente.toString()).emit('notificacion-nueva', notif);
         }
 
-        // 3. Enviar respuesta final
         res.json({
             ok: true,
-            msg: nuevoEstado === 'APROBADO' ? 'Pago aprobado' : 'Pago rechazado',
+            msg: esAprobado ? 'Pago aprobado' : 'Pago rechazado',
+            payment: pago,
             notificacion: notif
         });
 
@@ -359,6 +307,7 @@ const validarPagoAdministrativo = async (req, res) => {
         res.status(500).json({ ok: false, msg: 'Error al procesar la validación' });
     }
 };
+
 
 // enviar factura al cliente, agregado por José Prados
 function enviarFactura(req, res) {
@@ -409,14 +358,14 @@ const listarPaymentPorStatus = async (req, res) => {
     try {
         // First, find the category by name
         const payment = await Payment.findOne({ status: status });
-        
+
         if (!payment) {
             return res.status(404).json({ message: 'Pago no encontrado' });
         }
-        
+
         // Then, find projects using the category's ObjectId
         const payments = await Payment.find({ status: status });
-        
+
         res.status(200).send({ payments: payments });
     } catch (err) {
         res.status(500).send({ error: err });
@@ -432,7 +381,6 @@ module.exports = {
     updatePayment,
     deletePayment,
     getPaymentsByUser,
-    updateStatus,
     getMonthlyReport,
     validarPagoAdministrativo,
     enviarFactura,

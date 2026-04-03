@@ -25,11 +25,9 @@ const paymentSchema = Schema({
     },
     bank_destino: { type: String }, // Ej: Banesco, Mercantil
     referencia: { type: String, required: true }, 
-    
     // Soporte visual (Capture)
     img: { type: String, required: false },
     tasaBCV: { type: Number, required: true },
-
     // Control administrativo
     status: { 
         type: String, 
