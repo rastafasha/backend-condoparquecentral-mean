@@ -103,6 +103,8 @@ const startServer = async () => {
   app.use('/api/oficinas', require('./routes/oficina'));
   app.use('/api/contactos', require('./routes/contacto'));
  app.use('/api/notificaciones', require('./routes/notificaciones'));
+ app.use('/api/notipush', require('./routes/notipush'));
+ app.use('/api/comunicados', require('./routes/comunicado'));
 
 
   // Se ejecuta el día 1 de cada mes a las 00:00
