@@ -105,7 +105,7 @@ const getDocumentosColeccion = async(req, res = response) => {
                 };
                 if (esNumero) queryPayment.$or.push({ amount: Number(busqueda) });
                 
-                data = await Payment.find(queryPayment).populate('usuario', 'username email');
+                data = await Payment.find(queryPayment).populate('cliente', 'username email');
                 break;
 
             case 'transferencias':
