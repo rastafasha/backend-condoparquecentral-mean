@@ -1,15 +1,31 @@
 const Notificacion = require('../models/notificacion');
 
 // GET: /api/notificaciones/historial
+// controllers/notificaciones.js
 const obtenerHistorial = async (req, res) => {
+    const pagina = Number(req.query.page) || 1; // Recibimos página 1, 2, 3...
+    const limite = 10;
+    const skip = (pagina - 1) * limite; // Si es pág 2, salta 10
+
     try {
-        const notificaciones = await Notificacion.find({ usuario: req.uid })
-            .sort({ createdAt: -1 }).limit(50);
-        res.json({ ok: true, notificaciones });
+        const [notificaciones, total] = await Promise.all([
+            Notificacion.find({ usuario: req.uid })
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limite),
+            Notificacion.countDocuments({ usuario: req.uid })
+        ]);
+
+        res.json({ 
+            ok: true, 
+            notificaciones,
+            proximo: (skip + limite < total) ? pagina + 1 : null 
+        });
     } catch (error) {
-        res.status(500).json({ ok: false, msg: 'Error al obtener historial' });
+        res.status(500).json({ ok: false });
     }
 };
+
 
 // GET: /api/notificaciones/unread-count
 const obtenerContador = async (req, res) => {
