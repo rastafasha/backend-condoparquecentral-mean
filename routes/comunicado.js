@@ -28,7 +28,7 @@ router.post('/enviar-global', [
     validarJWT,
     check('titulo', 'El título del comunicado es obligatorio').not().isEmpty(),
     check('mensaje', 'El mensaje del comunicado es obligatorio').not().isEmpty(),
-    check('edificio', 'Debe seleccionar un edificio o TODOS').not().isEmpty(),
+    check('alcance_residencia', 'Debe seleccionar un edificio o TODOS').not().isEmpty(),
     validarCampos
 ], enviarComunicadoGlobal);
 
