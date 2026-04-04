@@ -304,8 +304,8 @@ const actualizarUsuarioRole = async (req, res = response) => {
                 port: process.env.PORT_GMAIL,
                 secure: true,
                 auth: {
-                    user: env.USER_EMAIL,
-                    pass: env.PASS_email
+                    user: process.env.USER_EMAIL,
+                    pass: process.env.PASS_email
                 },
                 tls: {
                     rejectUnauthorized: false
