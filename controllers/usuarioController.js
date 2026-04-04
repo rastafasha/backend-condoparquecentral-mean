@@ -50,45 +50,45 @@ const crearUsuarios = async (req, res = response) => {
         await usuario.save();
 
         // Enviar notificación de nuevo usuario al admin
-        const adminTransporter = nodemailer.createTransport({
-            host: process.env.HOST_GMAIL,
-            port: process.env.PORT_GMAIL,
-            secure: true,
-            auth: {
-                user: process.env.USER_EMAIL,
-                pass: process.env.PASS_email
-            },
-            tls: {
-                ciphers: 'SSLv3',
-                rejectUnauthorized: false
-            }
-        });
+        // const adminTransporter = nodemailer.createTransport({
+        //     host: process.env.HOST_GMAIL,
+        //     port: process.env.PORT_GMAIL,
+        //     secure: true,
+        //     auth: {
+        //         user: process.env.USER_EMAIL,
+        //         pass: process.env.PASS_email
+        //     },
+        //     tls: {
+        //         ciphers: 'SSLv3',
+        //         rejectUnauthorized: false
+        //     }
+        // });
 
-            const adminNotifyEmail = {
-            from: `"Soporte Condo App Parque Central" <${process.env.USER_EMAIL}>`, 
-            to: 'mercadocreativo@gmail.com',
-            subject: `Nuevo usuario registrado: ${usuario.username}`,
-            html: `
-                <h2>¡Nuevo usuario en Condo App Parque Central!</h2>
-                <p>Un nuevo usuario se ha registrado con éxito:</p>
-                <ul>
-                    <li><strong>Username:</strong> ${usuario.username}</li>
-                    <li><strong>Email:</strong> ${usuario.email}</li>
-                    <li><strong>Role:</strong> ${usuario.role}</li>
-                    <li><strong>Fecha:</strong> ${new Date().toLocaleString()}</li>
-                </ul>
-                <p>Revisa los detalles en el panel de administración.</p>
-                <p>No Responda este correo</p>
-            `
-        };
+        //     const adminNotifyEmail = {
+        //     from: `"Soporte Condo App Parque Central" <${process.env.USER_EMAIL}>`, 
+        //     to: 'mercadocreativo@gmail.com',
+        //     subject: `Nuevo usuario registrado: ${usuario.username}`,
+        //     html: `
+        //         <h2>¡Nuevo usuario en Condo App Parque Central!</h2>
+        //         <p>Un nuevo usuario se ha registrado con éxito:</p>
+        //         <ul>
+        //             <li><strong>Username:</strong> ${usuario.username}</li>
+        //             <li><strong>Email:</strong> ${usuario.email}</li>
+        //             <li><strong>Role:</strong> ${usuario.role}</li>
+        //             <li><strong>Fecha:</strong> ${new Date().toLocaleString()}</li>
+        //         </ul>
+        //         <p>Revisa los detalles en el panel de administración.</p>
+        //         <p>No Responda este correo</p>
+        //     `
+        // };
 
-        adminTransporter.sendMail(adminNotifyEmail, (error, info) => {
-            if (error) {
-                console.error('Error enviando email de notificación admin:', error);
-            } else {
-                console.log('Email de notificación admin enviado:', info.response);
-            }
-        });
+        // adminTransporter.sendMail(adminNotifyEmail, (error, info) => {
+        //     if (error) {
+        //         console.error('Error enviando email de notificación admin:', error);
+        //     } else {
+        //         console.log('Email de notificación admin enviado:', info.response);
+        //     }
+        // });
 
         //generar el token - JWT
         const token = await generarJWT(usuario.id);

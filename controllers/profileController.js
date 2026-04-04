@@ -4,14 +4,24 @@ const Facturacion = require('../models/facturacion');
 const Residencia = require('../models/residencia'); // Ajusta la ruta a tus modelos
 const Oficina = require('../models/oficina');
 const Local = require('../models/local');
-
+const Usuario = require('../models/usuario');
 const { sendNotification } = require('../helpers/notificaciones');
+
 
 const crearProfile = async(req, res) => {
     const uid = req.uid;
     const { residencia, oficina, local, ...datosPerfil } = req.body;
 
     try {
+        // 0. BUSCAMOS AL USUARIO PARA LAS NOTIFICACIONES
+        const usuarioDB = await Usuario.findById(uid);
+        if (!usuarioDB) {
+            return res.status(404).json({
+                ok: false,
+                msg: 'Usuario no encontrado'
+            });
+        }
+
         const IDs_Ubicacion = {};
 
         // 1. Si viene data de Residencia, crear el documento primero
@@ -21,14 +31,14 @@ const crearProfile = async(req, res) => {
             IDs_Ubicacion.residencia = [resDB._id];
         }
 
-        // 2. Si viene data de Oficina, crear el documento
+        // 2. Si viene data de Oficina
         if (oficina && oficina.length > 0) {
             const nuevaOfi = new Oficina(oficina[0]);
             const ofiDB = await nuevaOfi.save();
             IDs_Ubicacion.oficina = [ofiDB._id];
         }
 
-        // 3. Si viene data de Local, crear el documento
+        // 3. Si viene data de Local
         if (local && local.length > 0) {
             const nuevoLoc = new Local(local[0]);
             const locDB = await nuevoLoc.save();
@@ -39,16 +49,17 @@ const crearProfile = async(req, res) => {
         const profile = new Profile({
             usuario: uid,
             ...datosPerfil,
-            ...IDs_Ubicacion // Esto añade los arrays de IDs correctos
+            ...IDs_Ubicacion
         });
 
         const profileDB = await profile.save();
 
-        if (usuario.pushSubscription) {
+        // 5. NOTIFICACIÓN PUSH (Usando el usuarioDB que acabamos de buscar)
+        if (usuarioDB.pushSubscription) {
             sendNotification(
-                usuario.pushSubscription, 
+                usuarioDB.pushSubscription, 
                 'CorpoCapital App', 
-                'Notificaciones Activadas'
+                'Perfil creado y notificaciones activadas'
             );
         }
 
@@ -77,54 +88,43 @@ const actualizarProfile = async(req, res) => {
             return res.status(404).json({ ok: false, msg: 'Perfil no encontrado' });
         }
 
-        // 1. Extraemos los objetos para procesarlos y que NO queden en 'datosRestantes'
         const { residencia, oficina, local, ...datosRestantes } = req.body;
+        const cambiosProfile = { ...datosRestantes, usuario: uid };
 
-        // 2. Sincronizar RESIDENCIA
+        // 1. Sincronizar RESIDENCIA
         if (residencia && residencia.length > 0) {
-            const resData = residencia[0]; // Extraemos el objeto del array
+            const resData = residencia[0];
             if (resData._id) {
-                // Actualizamos la colección de Residencias
-                await Residencia.findByIdAndUpdate(resData._id, {
-                    edificio: resData.edificio,
-                    piso: resData.piso,
-                    letra: resData.letra
-                });
+                await Residencia.findByIdAndUpdate(resData._id, resData);
+                cambiosProfile.residencia = [resData._id]; // Mantenemos la relación
             }
+        } else if (residencia && residencia.length === 0) {
+            cambiosProfile.residencia = []; // LIMPIAMOS la relación en el perfil
         }
 
-        // 3. Sincronizar OFICINA
+        // 2. Sincronizar OFICINA
         if (oficina && oficina.length > 0) {
             const ofiData = oficina[0];
             if (ofiData._id) {
-                await Oficina.findByIdAndUpdate(ofiData._id, {
-                    edificio: ofiData.edificio,
-                    piso: ofiData.piso,
-                    letra: ofiData.letra
-                });
+                await Oficina.findByIdAndUpdate(ofiData._id, ofiData);
+                cambiosProfile.oficina = [ofiData._id];
             }
+        } else if (oficina && oficina.length === 0) {
+            cambiosProfile.oficina = []; // LIMPIAMOS
         }
 
-        // 4. Sincronizar LOCAL
+        // 3. Sincronizar LOCAL
         if (local && local.length > 0) {
             const locData = local[0];
             if (locData._id) {
-                await Local.findByIdAndUpdate(locData._id, {
-                    edificio: locData.edificio,
-                    piso: locData.piso,
-                    letra: locData.letra
-                });
+                await Local.findByIdAndUpdate(locData._id, locData);
+                cambiosProfile.local = [locData._id];
             }
+        } else if (local && local.length === 0) {
+            cambiosProfile.local = []; // LIMPIAMOS
         }
 
-        // 5. IMPORTANTE: Construimos el objeto de actualización del PERFIL
-        // Solo incluimos los campos básicos. NO incluimos los objetos de residencia/oficina
-        // para que Mongoose no intente validarlos como IDs.
-        const cambiosProfile = {
-            ...datosRestantes,
-            usuario: uid
-        };
-
+        // 4. Actualizar el Perfil con los cambios (incluyendo las posibles limpiezas [])
         const profileActualizado = await Profile.findByIdAndUpdate(id, cambiosProfile, { new: true });
 
         res.json({
