@@ -6,6 +6,8 @@ const cors = require('cors');
 const path = require('path');
 const socketIO = require('socket.io');
 
+
+
 const cron = require('node-cron');
 
 // Check if we're running on a serverless platform
@@ -73,6 +75,7 @@ module.exports.io = io;
 
 //lectura y parseo del body
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Wrap everything in async function to properly await dbConnection
 const startServer = async () => {

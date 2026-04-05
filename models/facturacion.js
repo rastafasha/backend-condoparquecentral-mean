@@ -18,7 +18,7 @@ const facturacionSchema = Schema({
         descripcion: { type: String }
     }],
 
-    // Ya no usamos un solo porcentajeIva global, sino la suma de los detalles
+    // Ya no usamos un solo ivaPorcentaje global, sino la suma de los detalles
     aplicaRetencion: { type: Boolean, default: false }, 
     montoRetencion: { type: Number, default: 0 }, // Se llena cuando el usuario reporta el pago
     comprobanteRetencion: { type: String }, // URL o nombre del archivo PDF de la retención
@@ -29,13 +29,17 @@ const facturacionSchema = Schema({
 
 // --- Cálculo Dinámico Robusto ---
 facturacionSchema.virtual('totalPagar').get(function() {
-    // Sumamos base + IVA de cada item individualmente
-    const subtotal = this.detalles.reduce((acc, item) => acc + item.montoBase, 0);
-    const totalIva = this.detalles.reduce((acc, item) => acc + (item.montoIva || 0), 0);
+    // 1. Sumamos la base imponible de todos los detalles
+    const subtotal = this.detalles.reduce((acc, item) => acc + (Number(item.montoBase) || 0), 0);
     
-    const descuentoRetencion = this.aplicaRetencion ? this.montoRetencion : 0;
+    // 2. Sumamos el IVA de todos los detalles (ya que lo guardas por línea)
+    const montoIvaTotal = this.detalles.reduce((acc, item) => acc + (Number(item.montoIva) || 0), 0);
     
-    return (subtotal + totalIva + this.otrosCargos) - descuentoRetencion;
+    const otros = Number(this.otrosCargos) || 0;
+    const retencion = this.aplicaRetencion ? (Number(this.montoRetencion) || 0) : 0;
+
+    // 3. Resultado final con redondeo
+    return Math.round((subtotal + montoIvaTotal + otros - retencion) * 100) / 100;
 });
 
 facturacionSchema.set('toJSON', { virtuals: true });
