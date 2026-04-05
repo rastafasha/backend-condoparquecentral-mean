@@ -57,26 +57,34 @@ const getPaymentsByUser = async (req, res) => {
         res.status(500).json({ ok: false, msg: 'Error al obtener los pagos del usuario' });
     }
 };
+
+
 const createPayment = async (req, res) => {
     try {
-        // 1. Extraemos los campos (asegúrate que los nombres coincidan con el FormData)
         const {
             amount,
-            cliente, // Este es el ID del usuario
+            cliente,
             metodo_pago,
             bank_destino,
             referencia,
             tasaBCV,
-            factura // Angular debe enviar 'factura', no 'facturaId'
+            factura,
+            img: imgURL // Capturamos si viene la URL directamente en el body
         } = req.body;
 
-        // 2. Manejo de la imagen (si usas Multer)
+        // 1. Declarar la variable img para que sea accesible
         let img = '';
+
+        // 2. Si viene un archivo (Multer/Cloudinary)
         if (req.file) {
-            img = req.file.filename; // o req.file.path según tu config
+            img = req.file.path || req.file.secure_url; 
+        } 
+        // 3. Si no viene archivo pero viene la URL en el body (ej. desde Cloudinary en Angular)
+        else if (imgURL) {
+            img = imgURL;
         }
 
-        // 3. Creamos el nuevo pago
+        // 4. Creamos el nuevo pago con la variable 'img' ya definida
         const payment = new Payment({
             amount: Number(amount),
             cliente,
@@ -84,8 +92,8 @@ const createPayment = async (req, res) => {
             bank_destino,
             referencia,
             tasaBCV: Number(tasaBCV),
-            factura, // Relación con la factura
-            img,
+            factura,
+            img, // Ahora 'img' siempre existe (aunque sea un string vacío)
             status: 'PENDIENTE'
         });
 
@@ -104,6 +112,7 @@ const createPayment = async (req, res) => {
         });
     }
 };
+
 
 const getPayment = async (req, res) => {
     const id = req.params.id;
