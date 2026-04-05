@@ -138,8 +138,7 @@ const actualizarOficina = async(req, res) => {
 };
 
 const borrarOficina = async(req, res) => {
-    const id = req.params.id; // ID de la oficina
-
+    const id = req.params.id.trim();
     try {
 
         const oficina = await Oficina.findById(id);

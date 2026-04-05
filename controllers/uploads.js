@@ -8,10 +8,10 @@ const upload = multer({ storage: multer.memoryStorage() });
 const cloudinary = require('cloudinary').v2;
 
 // configurar cloudinary
-cloudinary.config({ 
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, 
-  api_key: process.env.CLOUDINARY_API_KEY, 
-  api_secret: process.env.CLOUDINARY_API_SECRET 
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
 const fileUpload = async (req, res = response) => {
@@ -20,9 +20,9 @@ const fileUpload = async (req, res = response) => {
 
     // 1. Validar tipos de carpetas/colecciones
     const tiposValidos = [
-        'payments','profiles', 'transferencias'
+        'payments', 'profiles', 'transferencias'
     ];
-    
+
     if (!tiposValidos.includes(tipo)) {
         return res.status(400).json({ ok: false, msg: 'Tipo de colección no permitido' });
     }
@@ -37,7 +37,7 @@ const fileUpload = async (req, res = response) => {
     // 3. VALIDACIÓN estricta de 3MB
     const MAX_SIZE_MB = 3;
     const bytesLimit = MAX_SIZE_MB * 1024 * 1024;
-    
+
     if (file.size > bytesLimit) {
         return res.status(400).json({
             ok: false,
@@ -62,13 +62,16 @@ const fileUpload = async (req, res = response) => {
         // 6. Subir a Cloudinary con Transformaciones Automáticas
         const result = await cloudinary.uploader.upload(dataURI, {
             folder: `condoParqueCentral/uploads/${tipo}/`,
-            public_id: uuidv4(),
+            public_id: id, // Usas el ID que viene en req.params.id
+            overwrite: true, // Si suben otra, pisa la anterior
             transformation: [
                 { width: 1000, crop: "limit" }, // Redimensiona si es gigante
                 { quality: "auto" },            // Compresión inteligente (ahorra mucho ancho de banda)
                 { fetch_format: "auto" }        // Entrega el mejor formato según el navegador del cliente
             ]
         });
+
+
 
         const urlImagen = result.secure_url;
 
@@ -96,7 +99,7 @@ const retornaImagen = (req, res) => {
     const foto = req.params.foto;
 
     const pathImg = path.join(__dirname, `../uploads/${tipo}/${foto}`);
-    
+
     //traigo la foto desde cloudinary
     const urlImg = cloudinary.url(foto, {
         width: 300,

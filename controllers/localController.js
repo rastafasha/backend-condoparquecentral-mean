@@ -165,7 +165,7 @@ const actualizarLocal = async(req, res) => {
 // };
 
 const borrarLocal = async(req, res) => {
-    const id = req.params.id; // ID de la residencia
+    const id = req.params.id.trim();
 
     try {
 

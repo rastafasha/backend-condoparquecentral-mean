@@ -168,7 +168,7 @@ const actualizarResidencia = async(req, res) => {
 // };
 
 const borrarResidencia = async(req, res) => {
-    const id = req.params.id; // ID de la residencia
+    const id = req.params.id.trim();
 
     try {
 
