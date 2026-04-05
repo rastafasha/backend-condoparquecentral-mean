@@ -10,6 +10,7 @@ const Comunicado = require('../models/comunicado');
 const seedParqueCentral = async () => {
     try {
         await mongoose.connect(process.env.DB_MONGO);
+        await Comunicado.deleteMany({}); // Limpiamos facturas viejas
         
         // 1. Buscamos a tus usuarios y a un ADMINISTRADOR para la autoría
         const adminAutor = await Usuario.findOne({ 
