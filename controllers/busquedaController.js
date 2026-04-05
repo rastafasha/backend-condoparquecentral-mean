@@ -32,7 +32,7 @@ const getTodo = async (req, res = response) => {
             Payment.find({
                 $or: [{ referencia: regex }, { amount: regex },
                 { bank_destino: regex }, { status: regex }, { fecha_pago: regex },
-                { metodo_pago: regex },
+                { metodo_pago: regex },{cliente: regex}
                 ]
             }).populate('usuario', 'username email'),
             Transferencia.find({
@@ -101,7 +101,10 @@ const getDocumentosColeccion = async(req, res = response) => {
 
             case 'payments':
                 const queryPayment = { 
-                    $or: [{ referencia: regex }, { bank_destino: regex }, { status: regex }] 
+                    $or: [{ referencia: regex }, { bank_destino: regex }, { status: regex },
+                        {cliente: regex}
+
+                    ] 
                 };
                 if (esNumero) queryPayment.$or.push({ amount: Number(busqueda) });
                 
