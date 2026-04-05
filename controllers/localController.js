@@ -133,37 +133,64 @@ const actualizarLocal = async(req, res) => {
     }
 };
 
+// const borrarLocal = async(req, res) => {
+//     const id = req.params.id;
+//     const uid = req.uid;
+
+//     try {
+//         const localDB = await Local.findById(id);
+//         if (!localDB) {
+//             return res.status(404).json({ ok: false, msg: 'Local no encontrado' });
+//         }
+
+//         // Seguridad
+//         if (localDB.usuario.toString() !== uid && req.role !== 'ADMIN_ROLE') {
+//             return res.status(403).json({ ok: false, msg: 'No tiene permisos' });
+//         }
+
+//         // Limpiar el Perfil
+//         await Profile.findOneAndUpdate(
+//             { usuario: localDB.usuario },
+//             { $pull: { local: id } }
+//         );
+
+//         // Borrar el documento
+//         await Local.findByIdAndDelete(id);
+
+//         res.json({ ok: true, msg: 'Local eliminado y perfil actualizado' });
+
+//     } catch (error) {
+//         res.status(500).json({ ok: false, msg: 'Error al borrar local' });
+//     }
+// };
+
 const borrarLocal = async(req, res) => {
-    const id = req.params.id;
-    const uid = req.uid;
+    const id = req.params.id; // ID de la residencia
 
     try {
-        const localDB = await Local.findById(id);
-        if (!localDB) {
-            return res.status(404).json({ ok: false, msg: 'Local no encontrado' });
+
+        const local = await Local.findById(id);
+        if (!local) {
+            return res.status(500).json({
+                ok: false,
+                msg: 'local no encontrado por el id'
+            });
         }
 
-        // Seguridad
-        if (localDB.usuario.toString() !== uid && req.role !== 'ADMIN_ROLE') {
-            return res.status(403).json({ ok: false, msg: 'No tiene permisos' });
-        }
-
-        // Limpiar el Perfil
-        await Profile.findOneAndUpdate(
-            { usuario: localDB.usuario },
-            { $pull: { local: id } }
-        );
-
-        // Borrar el documento
         await Local.findByIdAndDelete(id);
 
-        res.json({ ok: true, msg: 'Local eliminado y perfil actualizado' });
+        res.json({
+            ok: true,
+            msg: 'local eliminado'
+        });
 
     } catch (error) {
-        res.status(500).json({ ok: false, msg: 'Error al borrar local' });
+        res.status(500).json({
+            ok: false,
+            msg: 'Error hable con el admin'
+        });
     }
 };
-
 
 
 

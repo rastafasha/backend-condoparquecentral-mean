@@ -28,7 +28,7 @@ const TransferenciaSchema = Schema({
     paymentday: { type: Date, default: Date.now },
     img: { type: String } // Para el capture
 }, { 
-    timestamps: true // Esto reemplaza tu pre('save') y updatedAt manual
+    timestamps: true 
 });
 
 module.exports = model('Transferencia', TransferenciaSchema);

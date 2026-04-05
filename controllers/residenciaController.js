@@ -136,36 +136,65 @@ const actualizarResidencia = async(req, res) => {
     }
 };
 
+// const borrarResidencia = async(req, res) => {
+//     const id = req.params.id;
+//     const uid = req.uid;
+
+//     try {
+//         const residenciaDB = await Residencia.findById(id);
+//         if (!residenciaDB) {
+//             return res.status(404).json({ ok: false, msg: 'Residencia no encontrada' });
+//         }
+
+//         // Seguridad
+//         if (residenciaDB.usuario.toString() !== uid && req.role !== 'ADMIN_ROLE') {
+//             return res.status(403).json({ ok: false, msg: 'No tiene permisos' });
+//         }
+
+//         // Limpiar el Perfil
+//         await Profile.findOneAndUpdate(
+//             { usuario: residenciaDB.usuario },
+//             { $pull: { residencia: id } }
+//         );
+
+//         // Borrar el documento
+//         await Residencia.findByIdAndDelete(id);
+
+//         res.json({ ok: true, msg: 'Residencia eliminada y perfil actualizado' });
+
+//     } catch (error) {
+//         res.status(500).json({ ok: false, msg: 'Error al borrar residencia' });
+//     }
+// };
+
 const borrarResidencia = async(req, res) => {
-    const id = req.params.id;
-    const uid = req.uid;
+    const id = req.params.id; // ID de la residencia
 
     try {
-        const residenciaDB = await Residencia.findById(id);
-        if (!residenciaDB) {
-            return res.status(404).json({ ok: false, msg: 'Residencia no encontrada' });
+
+        const residencia = await Residencia.findById(id);
+        if (!residencia) {
+            return res.status(500).json({
+                ok: false,
+                msg: 'residencia no encontrado por el id'
+            });
         }
 
-        // Seguridad
-        if (residenciaDB.usuario.toString() !== uid && req.role !== 'ADMIN_ROLE') {
-            return res.status(403).json({ ok: false, msg: 'No tiene permisos' });
-        }
-
-        // Limpiar el Perfil
-        await Profile.findOneAndUpdate(
-            { usuario: residenciaDB.usuario },
-            { $pull: { residencia: id } }
-        );
-
-        // Borrar el documento
         await Residencia.findByIdAndDelete(id);
 
-        res.json({ ok: true, msg: 'Residencia eliminada y perfil actualizado' });
+        res.json({
+            ok: true,
+            msg: 'residencia eliminado'
+        });
 
     } catch (error) {
-        res.status(500).json({ ok: false, msg: 'Error al borrar residencia' });
+        res.status(500).json({
+            ok: false,
+            msg: 'Error hable con el admin'
+        });
     }
 };
+
 
 
 

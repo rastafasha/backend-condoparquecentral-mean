@@ -139,47 +139,28 @@ const actualizarOficina = async(req, res) => {
 
 const borrarOficina = async(req, res) => {
     const id = req.params.id; // ID de la oficina
-    const uid = req.uid;       // ID del usuario que solicita borrar
 
     try {
-        // 1. Buscamos la oficina para verificar propiedad
-        const oficinaDB = await Oficina.findById(id);
 
-        if (!oficinaDB) {
-            return res.status(404).json({
+        const oficina = await Oficina.findById(id);
+        if (!oficina) {
+            return res.status(500).json({
                 ok: false,
-                msg: 'Oficina no encontrada'
+                msg: 'oficina no encontrado por el id'
             });
         }
 
-        // 2. Seguridad: Solo el dueño o el ADMIN pueden borrarla
-        if (oficinaDB.usuario.toString() !== uid && req.role !== 'ADMIN_ROLE') {
-            return res.status(403).json({
-                ok: false,
-                msg: 'No tienes permisos para eliminar esta oficina'
-            });
-        }
-
-        // 3. ACTUALIZACIÓN DEL PERFIL: Quitamos el ID del arreglo 'oficina'
-        // Usamos $pull para remover específicamente ese ID
-        await Profile.findOneAndUpdate(
-            { usuario: oficinaDB.usuario },
-            { $pull: { oficina: id } }
-        );
-
-        // 4. Borramos el documento de la oficina (Usando el Modelo Oficina)
         await Oficina.findByIdAndDelete(id);
 
         res.json({
             ok: true,
-            msg: 'Oficina eliminada y perfil actualizado'
+            msg: 'oficina eliminado'
         });
 
     } catch (error) {
-        console.log(error);
         res.status(500).json({
             ok: false,
-            msg: 'Error al borrar la oficina, hable con el admin'
+            msg: 'Error hable con el admin'
         });
     }
 };
