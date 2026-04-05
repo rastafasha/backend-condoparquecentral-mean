@@ -60,8 +60,15 @@ const getFactura = async (req, res) => {
 const generarFacturacionMensualMasiva = async (req, res) => {
     console.log('--- INICIANDO FACTURACIÓN MASIVA ---');
     try {
+        // 1. PRIMERO extraes los datos del body
         const { mes, anio, ivaPorcentaje, tasaBCV } = req.body;
-        const precioDolar = tasaBCV || 1;
+
+        // 2. DESPUÉS haces la limpieza (ahora sí existe la referencia)
+        const tasaLimpia = typeof tasaBCV === 'string' 
+            ? Number(tasaBCV.replace(',', '.')) 
+            : Number(tasaBCV);
+
+        const precioDolar = tasaLimpia || 1;
 
         // 1. Buscamos todos los perfiles y populamos sus datos
         const perfiles = await Profile.find()
@@ -127,13 +134,17 @@ const generarFacturacionMensualMasiva = async (req, res) => {
 
             // Locales
             perfil.local?.forEach(l => {
-                const alicuota = l.ivaEspecial || ivaPorcentaje || 16;
+                // Prioridad: 1. IVA especial del local, 2. IVA del modal, 3. 16% por defecto
+                const alicuota = Number(l.ivaEspecial || ivaPorcentaje || 0);
+                const base = Number(l.montoMensual) || 0;
+
                 detalles.push({
                     origen: 'LOCAL',
                     propiedadId: l._id,
-                    montoBase: l.montoMensual,
+                    montoBase: base,
                     ivaPorcentaje: alicuota,
-                    montoIva: l.montoMensual * (alicuota / 100),
+                    // Redondeo de seguridad para evitar decimales infinitos
+                    montoIva: Math.round((base * (alicuota / 100)) * 100) / 100,
                     descripcion: `Local: ${l.edificio} - ${l.letra}`
                 });
             });
@@ -477,7 +488,7 @@ const escribirPDF = (data, res) => {
     // --- BLOQUE DE TOTALES (Subido para asegurar una página) ---
     // Si 'y' (donde terminó la tabla) es mayor a 510, le damos un margen de 20px. 
     // Si no, lo dejamos en 510 para que mantenga una posición estética mínima.
-    const footerY = Math.max(y + 30, 400); 
+    const footerY = Math.max(y + 30, 400);
 
     doc.fontSize(8).fillColor('gray').text(`TASA BCV DEL DÍA: ${tasa.toFixed(2)} Bs/$`, 40, footerY);
 
@@ -500,7 +511,7 @@ const escribirPDF = (data, res) => {
     }
 
     // RECUADRO DE TOTAL FINAL (Estilo Factura Real)
-    const totalBoxY = footerY + 80; 
+    const totalBoxY = footerY + 80;
     doc.rect(30, totalBoxY, 550, 55).fill('#FF8C00');
     doc.fillColor('white').font('Helvetica-Bold');
 
@@ -516,7 +527,7 @@ const escribirPDF = (data, res) => {
     // --- SELLO Y FIRMA (Subido de 660 a 630 para seguridad) ---
     doc.fillColor('black');
 
-    const sealY = totalBoxY + 80; 
+    const sealY = totalBoxY + 80;
     doc.rect(30, sealY, 180, 80).stroke();
     doc.fillColor('black').fontSize(8).font('Helvetica-Bold').text('SELLO / FIRMA', 35, sealY + 5, { align: 'center', width: 170 });
     doc.font('Helvetica').fontSize(7).text('Recibido por: ___________________', 40, sealY + 30);

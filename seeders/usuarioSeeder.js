@@ -3,13 +3,19 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config();
 const Usuario = require('../models/usuario');
 
+
+
+const SUPERADMIN_ID = '69cafdbaaa6b8c81375e4249'; 
+
 const usuariosData = [
     {
+        _id: SUPERADMIN_ID,
         username: 'Super',
         email: 'superadmin@superadmin.com',
         password: 'password',
         role: 'SUPERADMIN_ROLE',
         numdoc: '1234567890',
+        
     },
     {
         username: 'Admin',

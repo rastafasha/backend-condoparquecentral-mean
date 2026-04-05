@@ -354,6 +354,14 @@ const actualizarUsuarioRole = async (req, res = response) => {
 
 const borrarUsuario = async (req, res) => {
     const uid = req.params.id?.trim();
+    const SUPERADMIN_ID = '69cafdbaaa6b8c81375e4249';
+
+    if (id === SUPERADMIN_ID) {
+        return res.status(403).json({
+            ok: false,
+            msg: 'Prohibido: Este usuario es vital para el mantenimiento y no puede ser eliminado.'
+        });
+    }
 
     if (!uid) {
         return res.status(400).json({

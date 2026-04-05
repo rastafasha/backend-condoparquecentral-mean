@@ -15,6 +15,7 @@
         "seed:transferencias": "node seeders/transferenciasSeeder.js",
         "seed:comunicados": "node seeders/comunicadosTest.js",
         "seed:comunicadosData": "node seeders/comunicadosData.js",
+        "seed:all": "node seeders/mainSeeder.js",
         "start": "node index.js"
     },
     "keywords": [],

@@ -154,9 +154,12 @@ const seedFacturas = async () => {
             const usuarioActual = usuarios[userIndex];
             const mes = (i % 12) + 1;
             const anio = 2024;
+            const montoBase = 500;
+            const ivaPorc = 16;
+            const calculadoIva = (montoBase * (ivaPorc / 100));
 
             facturasData.push({
-                usuario: usuarioActual._id, // <--- ID REAL vinculado
+                usuario: usuarioActual._id,
                 nroFactura: `FAC-${usuarioActual.username.toUpperCase()}-${202400 + i}`,
                 mes: mes,
                 anio: anio,
@@ -164,22 +167,23 @@ const seedFacturas = async () => {
                 detalles: [
                     {
                         origen: 'RESIDENCIA',
-                        montoBase: 500,
-                        ivaPorcentaje: 16,
-                        montoIva: 80,
+                        montoBase: montoBase,
+                        ivaPorcentaje: ivaPorc,
+                        // Redondeo de seguridad para que el PDF no muestre decimales raros
+                        montoIva: Math.round(calculadoIva * 100) / 100,
                         descripcion: `Cuota de mantenimiento mes ${mes}`
                     }
                 ],
-                aplicaRetencion: i % 3 === 0, // Algunas con retención
+                aplicaRetencion: i % 3 === 0,
                 montoRetencion: i % 3 === 0 ? 50 : 0,
                 otrosCargos: 0,
-                estado: i % 5 === 0 ? 'PAGADO' : 'PENDIENTE' // Mayoría pendientes
+                estado: i % 5 === 0 ? 'PAGADO' : 'PENDIENTE'
             });
         }
 
         await Facturacion.insertMany(facturasData);
         console.log('✅ 45 Facturas vinculadas correctamente a Juan, Ana y Carlos');
-        
+
         mongoose.connection.close();
     } catch (error) {
         console.error('❌ Error:', error.message);
